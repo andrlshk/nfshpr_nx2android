@@ -1,0 +1,2461 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NFS Hot Pursuit Remastered — Android Launcher</title>
+    <script src="tailwind.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background-color: #070a0f;
+            background-image:
+                radial-gradient(ellipse 75% 45% at 25% 0%, rgba(230, 57, 23, 0.14), transparent 65%),
+                radial-gradient(ellipse 75% 45% at 75% 100%, rgba(0, 114, 229, 0.16), transparent 65%);
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            overflow-x: hidden;
+        }
+
+        /* Реалистичный горизонтальный корпус смартфона (20:9) */
+        .device-frame {
+            position: relative;
+            aspect-ratio: 20 / 9;
+            width: 100%;
+            border-radius: 26px;
+            padding: 7px;
+            background: linear-gradient(145deg, #333c4a 0%, #141922 38%, #0c1017 70%, #2a3342 100%);
+            box-shadow:
+                0 28px 70px -14px rgba(0, 0, 0, 0.88),
+                0 10px 26px -6px rgba(0, 0, 0, 0.65),
+                inset 0 1px 1px rgba(255, 255, 255, 0.28),
+                inset 0 -1px 1px rgba(255, 255, 255, 0.1);
+        }
+
+        .device-screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #0b0f16;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* =====================================================================
+           СТИЛИСТИКА NEED FOR SPEED: HOT PURSUIT REMASTERED (CRITERION / AUTOLOG)
+           ===================================================================== */
+        .hp-glass-panel {
+            background: linear-gradient(165deg, rgba(11, 16, 24, 0.78) 0%, rgba(7, 11, 18, 0.85) 100%);
+            backdrop-filter: blur(26px) saturate(165%);
+            -webkit-backdrop-filter: blur(26px) saturate(165%);
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-top: 1px solid rgba(255, 255, 255, 0.38);
+            border-radius: 8px;
+            box-shadow:
+                0 20px 48px rgba(0, 0, 0, 0.58),
+                inset 0 1px 0 rgba(255, 255, 255, 0.16);
+        }
+
+        .hp-glass-row {
+            background: rgba(255, 255, 255, 0.055);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-top-color: rgba(255, 255, 255, 0.2);
+            border-radius: 5px;
+            transition: background 0.15s ease, border-color 0.15s ease;
+        }
+
+        .hp-glass-row:hover {
+            background: rgba(255, 255, 255, 0.085);
+            border-color: rgba(255, 255, 255, 0.22);
+        }
+
+        /* Парящие кнопки главного экрана — прозрачное стекло с живым световым кантом */
+        .hp-btn-play {
+            position: relative;
+            background: linear-gradient(135deg, rgba(235, 62, 26, 0.94) 0%, rgba(196, 36, 10, 0.94) 100%);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border: 1px solid rgba(255, 175, 155, 0.55);
+            border-top: 1px solid rgba(255, 225, 215, 0.85);
+            border-radius: 5px;
+            box-shadow:
+                0 8px 24px rgba(230, 57, 23, 0.42),
+                inset 0 1px 0 rgba(255, 255, 255, 0.35);
+            transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.22s ease, filter 0.2s ease;
+            will-change: transform;
+        }
+
+        .hp-btn-play:hover {
+            transform: translateY(-1.5px);
+            filter: brightness(1.08);
+            box-shadow:
+                0 12px 28px rgba(230, 57, 23, 0.56),
+                inset 0 1px 0 rgba(255, 255, 255, 0.5);
+        }
+
+        .hp-btn-play:active,
+        .hp-btn-play.is-touching {
+            transform: scale(0.935) translateY(1px);
+            filter: brightness(1.16);
+            box-shadow:
+                0 4px 14px rgba(230, 57, 23, 0.72),
+                0 0 22px rgba(255, 92, 56, 0.55),
+                inset 0 1px 0 rgba(255, 255, 255, 0.65);
+            transition-duration: 0.08s;
+        }
+
+        .hp-btn-glass {
+            position: relative;
+            background: rgba(14, 19, 29, 0.54);
+            backdrop-filter: blur(18px) saturate(160%);
+            -webkit-backdrop-filter: blur(18px) saturate(160%);
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            border-top: 1px solid rgba(255, 255, 255, 0.42);
+            border-radius: 5px;
+            box-shadow:
+                0 8px 22px rgba(0, 0, 0, 0.42),
+                inset 0 1px 0 rgba(255, 255, 255, 0.18);
+            transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1), background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+            will-change: transform;
+        }
+
+        .hp-btn-glass:hover {
+            transform: translateY(-1.5px);
+            background: rgba(22, 32, 48, 0.72);
+            border-color: rgba(102, 181, 255, 0.65);
+        }
+
+        .hp-btn-glass:active,
+        .hp-btn-glass.is-touching {
+            transform: scale(0.945) translateY(1px);
+            background: rgba(32, 48, 72, 0.86);
+            border-color: rgba(130, 200, 255, 0.9);
+            box-shadow:
+                0 4px 12px rgba(0, 0, 0, 0.5),
+                0 0 16px rgba(0, 114, 229, 0.38),
+                inset 0 1px 0 rgba(255, 255, 255, 0.35);
+            transition-duration: 0.08s;
+        }
+
+        .hp-telemetry-pill {
+            background: rgba(12, 17, 26, 0.50);
+            backdrop-filter: blur(16px) saturate(150%);
+            -webkit-backdrop-filter: blur(16px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.20);
+            border-top: 1px solid rgba(255, 255, 255, 0.34);
+            border-radius: 5px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+            transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.2s ease;
+        }
+
+        .hp-telemetry-pill:active,
+        .hp-telemetry-pill.is-touching {
+            transform: scale(0.95);
+            border-color: rgba(255, 255, 255, 0.55);
+        }
+
+        /* Плавные анимации переходов экранов и оверлеев под тач-интерфейс */
+        @keyframes screenFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.985) translateY(6px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @keyframes panelPopIn {
+            from {
+                opacity: 0;
+                transform: scale(0.95) translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+        }
+
+        @keyframes screenExitOut {
+            from {
+                opacity: 1;
+                transform: scale(1) translateY(0);
+            }
+            to {
+                opacity: 0;
+                transform: scale(0.985) translateY(-5px);
+            }
+        }
+
+        .hp-screen-enter {
+            animation: screenFadeIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .hp-panel-enter {
+            animation: panelPopIn 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .hp-screen-exit {
+            animation: screenExitOut 0.14s cubic-bezier(0.4, 0, 1, 1) both;
+            pointer-events: none;
+        }
+
+        .hp-panel-enter {
+            animation: panelPopIn 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+
+        .hp-tap-target {
+            transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), background-color 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+        }
+
+        .hp-tap-target:active,
+        .hp-tap-target.is-touching {
+            transform: scale(0.93);
+            transition-duration: 0.07s;
+        }
+
+        /* Живой отблеск люстры SCPD */
+        @keyframes scpdPulse {
+            0%, 100% {
+                box-shadow: -10px 0 18px rgba(230, 57, 23, 0.65), 10px 0 12px rgba(0, 114, 229, 0.25);
+            }
+            50% {
+                box-shadow: -10px 0 12px rgba(230, 57, 23, 0.25), 10px 0 18px rgba(0, 114, 229, 0.65);
+            }
+        }
+
+        .scpd-lightbar {
+            height: 2.5px;
+            border-radius: 2px;
+            background: linear-gradient(90deg, #ff3b1f 0%, #ff3b1f 48%, #ffffff 50%, #1a8cff 52%, #1a8cff 100%);
+            animation: scpdPulse 2.4s ease-in-out infinite;
+        }
+
+        .hp-title-shadow {
+            text-shadow:
+                0 2px 14px rgba(0, 0, 0, 0.85),
+                0 1px 3px rgba(0, 0, 0, 0.95);
+        }
+
+        /* Чёткий ползунок в стиле приборной шкалы */
+        input[type="range"].hp-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 100%;
+            height: 5px;
+            border-radius: 3px;
+            background: rgba(6, 9, 14, 0.78);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            outline: none;
+            cursor: pointer;
+        }
+
+        input[type="range"].hp-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 13px;
+            height: 15px;
+            border-radius: 3px;
+            background: linear-gradient(180deg, #ffffff 0%, #dbeafe 100%);
+            border: 1.5px solid #1a8cff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+            cursor: pointer;
+            transition: transform 0.12s ease, border-color 0.12s ease;
+        }
+
+        input[type="range"].hp-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.12);
+            border-color: #ff4b2b;
+        }
+
+        input[type="range"].hp-slider::-moz-range-thumb {
+            width: 13px;
+            height: 15px;
+            background: #f8fafc;
+            border: 1.5px solid #1a8cff;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        /* Компактный скроллбар для узких экранов */
+        .hp-scroll::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        .hp-scroll::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.25);
+        }
+        .hp-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.24);
+        }
+
+        /* Перетаскиваемые элементы HUD */
+        .hud-node {
+            user-select: none;
+            touch-action: none;
+            transition: filter 0.15s ease;
+        }
+        .hud-node:hover {
+            filter: brightness(1.14);
+        }
+
+        /* Android Fullscreen WebView Overrides (No Internal Panning/Bounce) */
+        html, body {
+            position: fixed !important;
+            inset: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+            overscroll-behavior: none !important;
+            touch-action: none !important;
+            user-select: none !important;
+            -webkit-user-select: none !important;
+        }
+        body > header {
+            display: none !important;
+        }
+        #workspaceContainer {
+            position: fixed !important;
+            inset: 0 !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: none !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+            overscroll-behavior: none !important;
+            touch-action: none !important;
+        }
+        .device-frame {
+            aspect-ratio: auto !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            background: #0d1015 !important;
+            overflow: hidden !important;
+        }
+        .device-screen {
+            border-radius: 0 !important;
+            border: none !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            overflow: hidden !important;
+        }
+        .hp-scroll {
+            touch-action: pan-y !important;
+            overscroll-behavior: contain !important;
+        }
+    .hud-dropzone, .hud-node { touch-action: none; -webkit-user-select: none; user-select: none; }
+        *, *::before, *::after { animation: none !important; transition: none !important; }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-between py-3.5 px-3 sm:px-6 selection:bg-[#e63917] selection:text-white">
+
+    <!-- Скрытый input для выбора своего скриншота фона -->
+    <input type="file" id="bgUploadInput" accept="image/*" class="hidden" onchange="handleCustomBgUpload(event)">
+
+    <!-- Глобальный индикатор перетаскивания изображения (Drag & Drop) -->
+    <div id="globalDropOverlay" class="fixed inset-0 z-50 hidden items-center justify-center bg-[#070a0f]/80 backdrop-blur-md p-6 pointer-events-none">
+        <div class="hp-glass-panel w-full max-w-md p-6 flex flex-col items-center text-center gap-2.5">
+            <div class="w-10 h-10 rounded bg-[#0072e5]/25 border border-[#0072e5] flex items-center justify-center">
+                <svg class="w-5 h-5 text-[#66b5ff]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            </div>
+            <div class="text-sm font-black uppercase tracking-wider text-white">Отпустите изображение для фона</div>
+            <div class="scpd-lightbar w-32"></div>
+            <div class="font-mono text-[11px] text-slate-300">PNG / JPG / WEBP • Автоподгонка 20:9</div>
+        </div>
+    </div>
+
+    <!-- ВЕРХНЯЯ КОМПАКТНАЯ УТИЛИТАРНАЯ ПАНЕЛЬ (ВНЕ КОРПУСА ТЕЛЕФОНА) -->
+    <header class="w-full max-w-[1160px] mb-3 flex flex-wrap items-center justify-between gap-3 z-30">
+        <!-- Переключатель режимов просмотра: Лаунчер / Коллаж экранов -->
+        <div class="inline-flex items-center bg-[#0d121a]/90 border border-white/15 p-1 rounded-md gap-1">
+            <button type="button" id="btnViewSingle" onclick="setViewMode('single')"
+                class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer rounded">
+                Лаунчер
+            </button>
+            <button type="button" id="btnViewCollage" onclick="setViewMode('collage')"
+                class="px-3.5 py-1 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer rounded">
+                Коллаж экранов
+            </button>
+        </div>
+
+        <!-- Правая утилита: Выбрать фон / Ctrl+V / Drag & Drop -->
+        <div class="flex items-center gap-2">
+            <span class="hidden sm:inline font-mono text-[11px] text-slate-400 mr-1">Ctrl+V или перетащите фото</span>
+            <button type="button" onclick="document.getElementById('bgUploadInput').click()"
+                class="px-3.5 py-1.5 bg-[#0d121a]/90 hover:bg-[#161f2e] border border-white/20 text-xs font-semibold text-slate-200 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer rounded-md">
+                <svg class="w-3.5 h-3.5 text-[#1a8cff]" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Выбрать фон</span>
+            </button>
+            <button type="button" id="btnResetCustomBg" onclick="resetCustomBg()"
+                class="hidden px-3 py-1.5 bg-[#e63917]/20 hover:bg-[#e63917]/40 border border-[#e63917]/60 text-xs font-semibold text-white transition-colors cursor-pointer rounded-md">
+                Сброс фона
+            </button>
+        </div>
+    </header>
+
+    <!-- СТЕК ВСПЛЫВАЮЩИХ УВЕДОМЛЕНИЙ -->
+    <div id="toastContainer" class="fixed top-14 right-5 z-50 flex flex-col gap-2 pointer-events-none max-w-xs"></div>
+
+    <!-- МОДАЛЬНОЕ ОКНО ПРОСМОТРА И СКАЧИВАНИЯ ЛОГА -->
+    <div id="logModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/75 backdrop-blur-sm p-4">
+        <div class="hp-glass-panel w-full max-w-2xl p-4 sm:p-5 space-y-3">
+            <div class="flex items-center justify-between gap-2 pb-2.5 border-b border-white/15">
+                <div class="flex items-center gap-2.5">
+                    <span class="w-2 h-5 rounded-sm bg-gradient-to-b from-[#e63917] to-[#0072e5]"></span>
+                    <span class="text-sm font-extrabold uppercase tracking-wider text-white">nx2android_runtime.log</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button type="button" onclick="copyDiagnosticLog()"
+                        class="px-3 py-1 bg-[#e63917] hover:bg-[#ff4724] text-white text-xs font-bold uppercase tracking-wider cursor-pointer rounded">
+                        Копировать
+                    </button>
+                    <button type="button" onclick="downloadDiagnosticLog()"
+                        class="px-3 py-1 bg-[#0072e5] hover:bg-[#1985ff] text-white text-xs font-bold uppercase tracking-wider cursor-pointer rounded">
+                        Скачать .log
+                    </button>
+                    <button type="button" onclick="toggleLogModal(false)"
+                        class="px-2.5 py-1 bg-white/10 hover:bg-white/20 text-white text-xs font-bold cursor-pointer rounded">
+                        ✕
+                    </button>
+                </div>
+            </div>
+            <pre id="logModalContent" class="bg-[#06090e]/90 border border-white/10 rounded p-3.5 font-mono text-[11px] leading-relaxed text-slate-200 max-h-72 overflow-y-auto hp-scroll whitespace-pre-wrap select-text"></pre>
+        </div>
+    </div>
+
+    <!-- ГЛАВНАЯ РАБОЧАЯ ОБЛАСТЬ (20:9 ОДИН ЭКРАН ИЛИ КОЛЛАЖ 2×2) -->
+    <main id="workspaceContainer" class="w-full max-w-[1160px] my-auto flex-1 flex flex-col justify-center">
+        <!-- Рендерится через renderApp() -->
+    </main>
+
+    <script>
+        // =========================================================================
+        // 1. ФОНОВЫЙ СЛОЙ ЛАУНЧЕРА + ПОЛЬЗОВАТЕЛЬСКОЕ ИЗОБРАЖЕНИЕ
+        // =========================================================================
+        function renderWallpaperLayers() {
+            if (state.customBgUrl) {
+                return `
+                    <div class="absolute inset-0 w-full h-full pointer-events-none select-none overflow-hidden bg-[#0a0d12]">
+                        <img src="${state.customBgUrl}"
+                             alt="Launcher Background"
+                             style="object-fit: cover; width: 100%; height: 100%; object-position: center;"
+                             class="absolute inset-0 w-full h-full">
+                        <div class="absolute inset-0 bg-gradient-to-t from-[#06090f]/68 via-transparent to-[#06090f]/35"></div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="absolute inset-0 w-full h-full pointer-events-none select-none overflow-hidden"
+                     style="background: linear-gradient(155deg, #0b1018 0%, #121926 52%, #19212e 100%);">
+                    <div class="absolute inset-0"
+                         style="background:
+                            radial-gradient(ellipse 72% 44% at 68% 58%, rgba(214, 142, 84, 0.14), transparent 70%),
+                            radial-gradient(ellipse 50% 45% at 18% 18%, rgba(0, 114, 229, 0.11), transparent 68%),
+                            radial-gradient(ellipse 46% 40% at 86% 20%, rgba(230, 57, 23, 0.09), transparent 65%);">
+                    </div>
+                    <div class="absolute inset-0" style="box-shadow: inset 0 0 95px rgba(4, 6, 10, 0.72);"></div>
+                </div>
+            `;
+        }
+
+        // =========================================================================
+        // 2. ЕДИНЫЙ ЧИСТЫЙ МОНОХРОМНЫЙ СТИЛЬ ИКОНОК HUD БЕЗ ТЕКСТА ВНУТРИ
+        // =========================================================================
+        function renderHudButtonSvg(icon, size = 64) {
+            const stroke = 'rgba(255, 255, 255, 0.42)';
+            const bg = 'rgba(12, 16, 24, 0.72)';
+            const tint = 'rgba(255, 255, 255, 0.04)';
+            const fg = '#f8fafc';
+            const sub = 'rgba(248, 250, 252, 0.62)';
+
+            const glyphs = {
+                // Педали, руль и движение
+                gas: `
+                    <rect x="33" y="24" width="30" height="48" rx="7" fill="none" stroke="${fg}" stroke-width="3.2"/>
+                    <line x1="40" y1="35" x2="56" y2="35" stroke="${fg}" stroke-width="2.6" stroke-linecap="round"/>
+                    <line x1="40" y1="44" x2="56" y2="44" stroke="${fg}" stroke-width="2.6" stroke-linecap="round"/>
+                    <line x1="40" y1="53" x2="56" y2="53" stroke="${fg}" stroke-width="2.6" stroke-linecap="round"/>
+                    <path d="M44 64 L48 60 L52 64" fill="none" stroke="${fg}" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                brake: `
+                    <rect x="27" y="29" width="42" height="38" rx="7" fill="none" stroke="${fg}" stroke-width="3.2"/>
+                    <line x1="35" y1="40" x2="61" y2="40" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                    <line x1="35" y1="48" x2="61" y2="48" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                    <line x1="35" y1="56" x2="61" y2="56" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                `,
+                handbrake: `
+                    <circle cx="48" cy="48" r="16" fill="none" stroke="${fg}" stroke-width="3.2"/>
+                    <path d="M28 36 A22 22 0 0 0 28 60" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linecap="round"/>
+                    <path d="M68 36 A22 22 0 0 1 68 60" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linecap="round"/>
+                    <text x="48" y="54" text-anchor="middle" fill="${fg}" font-family="Inter,sans-serif" font-weight="800" font-size="17">P</text>
+                `,
+                left: `
+                    <path d="M56 30 L37 48 L56 66" fill="none" stroke="${fg}" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                right: `
+                    <path d="M40 30 L59 48 L40 66" fill="none" stroke="${fg}" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                up: `
+                    <path d="M30 56 L48 37 L66 56" fill="none" stroke="${fg}" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                down: `
+                    <path d="M30 40 L48 59 L66 40" fill="none" stroke="${fg}" stroke-width="4.6" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                stick: `
+                    <circle cx="48" cy="48" r="25" fill="none" stroke="rgba(255,255,255,0.28)" stroke-width="2.4"/>
+                    <circle cx="48" cy="48" r="14" fill="rgba(255,255,255,0.10)" stroke="${fg}" stroke-width="3.2"/>
+                    <circle cx="48" cy="48" r="4.5" fill="${fg}"/>
+                `,
+                gyro: `
+                    <ellipse cx="48" cy="50" rx="25" ry="12" fill="none" stroke="${fg}" stroke-width="3"/>
+                    <path d="M35 32 L48 25 L61 32" fill="none" stroke="${fg}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="48" cy="50" r="4.5" fill="${fg}"/>
+                `,
+                nitro: `
+                    <path d="M52 24 L34 49 H48 L44 72 L62 47 H48 Z" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linejoin="round"/>
+                `,
+                headlights: `
+                    <path d="M43 33 C56 33 64 39 64 48 C64 57 56 63 43 63 Z" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linejoin="round"/>
+                    <line x1="25" y1="38" x2="36" y2="38" stroke="${fg}" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="23" y1="48" x2="36" y2="48" stroke="${fg}" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="25" y1="58" x2="36" y2="58" stroke="${fg}" stroke-width="3" stroke-linecap="round"/>
+                `,
+                siren: `
+                    <rect x="28" y="51" width="40" height="9" rx="3" fill="none" stroke="${fg}" stroke-width="2.8"/>
+                    <path d="M33 51 V44 A5 5 0 0 1 38 39 H48 V51 Z" fill="${fg}"/>
+                    <path d="M48 39 H58 A5 5 0 0 1 63 44 V51 H48 Z" fill="none" stroke="${fg}" stroke-width="2.8"/>
+                    <line x1="48" y1="25" x2="48" y2="32" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                    <line x1="33" y1="28" x2="38" y2="33" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                    <line x1="63" y1="28" x2="58" y2="33" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                `,
+
+                // Спецсредства погони
+                emp: `
+                    <circle cx="48" cy="48" r="19" fill="none" stroke="${sub}" stroke-width="2.6" stroke-dasharray="5 4"/>
+                    <circle cx="48" cy="48" r="10" fill="none" stroke="${fg}" stroke-width="3"/>
+                    <circle cx="48" cy="48" r="3.5" fill="${fg}"/>
+                    <line x1="48" y1="22" x2="48" y2="30" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                    <line x1="48" y1="66" x2="48" y2="74" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                    <line x1="22" y1="48" x2="30" y2="48" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                    <line x1="66" y1="48" x2="74" y2="48" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                `,
+                spikes: `
+                    <line x1="25" y1="59" x2="71" y2="59" stroke="${fg}" stroke-width="3.4" stroke-linecap="round"/>
+                    <path d="M31 59 L35 37 L39 59" fill="none" stroke="${fg}" stroke-width="3" stroke-linejoin="round"/>
+                    <path d="M44 59 L48 32 L52 59" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linejoin="round"/>
+                    <path d="M57 59 L61 37 L65 59" fill="none" stroke="${fg}" stroke-width="3" stroke-linejoin="round"/>
+                `,
+                roadblock: `
+                    <rect x="26" y="34" width="44" height="14" rx="3" fill="none" stroke="${fg}" stroke-width="3"/>
+                    <line x1="36" y1="34" x2="32" y2="48" stroke="${fg}" stroke-width="2.8"/>
+                    <line x1="50" y1="34" x2="46" y2="48" stroke="${fg}" stroke-width="2.8"/>
+                    <line x1="64" y1="34" x2="60" y2="48" stroke="${fg}" stroke-width="2.8"/>
+                    <line x1="34" y1="48" x2="34" y2="65" stroke="${fg}" stroke-width="3.2" stroke-linecap="round"/>
+                    <line x1="62" y1="48" x2="62" y2="65" stroke="${fg}" stroke-width="3.2" stroke-linecap="round"/>
+                `,
+                heli: `
+                    <line x1="24" y1="33" x2="72" y2="33" stroke="${fg}" stroke-width="3.2" stroke-linecap="round"/>
+                    <line x1="48" y1="33" x2="48" y2="41" stroke="${fg}" stroke-width="3"/>
+                    <ellipse cx="48" cy="50" rx="15" ry="9" fill="none" stroke="${fg}" stroke-width="3"/>
+                    <line x1="34" y1="64" x2="62" y2="64" stroke="${fg}" stroke-width="2.8" stroke-linecap="round"/>
+                `,
+                turbo: `
+                    <path d="M31 47 L48 29 L65 47" fill="none" stroke="${fg}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M31 63 L48 45 L65 63" fill="none" stroke="${fg}" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                jammer: `
+                    <path d="M29 41 A25 25 0 0 1 67 41" fill="none" stroke="${fg}" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M36 49 A15 15 0 0 1 60 49" fill="none" stroke="${fg}" stroke-width="3" stroke-linecap="round"/>
+                    <circle cx="48" cy="58" r="4" fill="${fg}"/>
+                    <line x1="31" y1="66" x2="65" y2="32" stroke="${fg}" stroke-width="3.4" stroke-linecap="round"/>
+                `,
+
+                // Действия меню, гаража, покраски, винилов и фоторежима
+                confirm: `
+                    <polyline points="30,49 43,62 67,34" fill="none" stroke="${fg}" stroke-width="4.8" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                back: `
+                    <path d="M35 41 H53 A11 11 0 0 1 53 63 H38" fill="none" stroke="${fg}" stroke-width="3.8" stroke-linecap="round"/>
+                    <polyline points="41,33 31,41 41,49" fill="none" stroke="${fg}" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                tabPrev: `
+                    <polyline points="46,34 33,48 46,62" fill="none" stroke="${fg}" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="61,34 48,48 61,62" fill="none" stroke="${sub}" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                tabNext: `
+                    <polyline points="35,34 48,48 35,62" fill="none" stroke="${sub}" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="50,34 63,48 50,62" fill="none" stroke="${fg}" stroke-width="3.8" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                paint: `
+                    <rect x="28" y="27" width="33" height="15" rx="4" fill="none" stroke="${fg}" stroke-width="3.2"/>
+                    <path d="M61 34 H68 V47 H48 V55" fill="none" stroke="${fg}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <rect x="44" y="55" width="8" height="13" rx="3" fill="${fg}"/>
+                `,
+                wrap: `
+                    <rect x="28" y="28" width="40" height="40" rx="8" fill="none" stroke="${sub}" stroke-width="2.8" stroke-dasharray="5 3.5"/>
+                    <polygon points="48,34 51.5,43.5 62,43.5 53.5,49.5 56.5,59.5 48,53.5 39.5,59.5 42.5,49.5 34,43.5 44.5,43.5" fill="none" stroke="${fg}" stroke-width="2.8" stroke-linejoin="round"/>
+                `,
+                layers: `
+                    <polygon points="48,28 69,38 48,48 27,38" fill="none" stroke="${fg}" stroke-width="3" stroke-linejoin="round"/>
+                    <polyline points="27,48 48,58 69,48" fill="none" stroke="${fg}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                    <polyline points="27,58 48,68 69,58" fill="none" stroke="${sub}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                orbit360: `
+                    <path d="M26 52 C26 60 36 65 48 65 C60 65 70 60 70 52" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linecap="round"/>
+                    <path d="M63 46 L70 52 L64 58" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+                    <circle cx="48" cy="40" r="10" fill="none" stroke="${fg}" stroke-width="3"/>
+                `,
+                zoomIn: `
+                    <circle cx="44" cy="44" r="15" fill="none" stroke="${fg}" stroke-width="3.2"/>
+                    <line x1="55" y1="55" x2="67" y2="67" stroke="${fg}" stroke-width="3.6" stroke-linecap="round"/>
+                    <line x1="44" y1="38" x2="44" y2="50" stroke="${fg}" stroke-width="3" stroke-linecap="round"/>
+                    <line x1="38" y1="44" x2="50" y2="44" stroke="${fg}" stroke-width="3" stroke-linecap="round"/>
+                `,
+                zoomOut: `
+                    <circle cx="44" cy="44" r="15" fill="none" stroke="${fg}" stroke-width="3.2"/>
+                    <line x1="55" y1="55" x2="67" y2="67" stroke="${fg}" stroke-width="3.6" stroke-linecap="round"/>
+                    <line x1="38" y1="44" x2="50" y2="44" stroke="${fg}" stroke-width="3" stroke-linecap="round"/>
+                `,
+                rotateLeft: `
+                    <path d="M32 45 A16 16 0 1 1 38 61" fill="none" stroke="${fg}" stroke-width="3.4" stroke-linecap="round"/>
+                    <polyline points="40,36 31,45 42,48" fill="none" stroke="${fg}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                rotateRight: `
+                    <path d="M64 45 A16 16 0 1 0 58 61" fill="none" stroke="${fg}" stroke-width="3.4" stroke-linecap="round"/>
+                    <polyline points="56,36 65,45 54,48" fill="none" stroke="${fg}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                deleteLayer: `
+                    <polyline points="31,36 65,36" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linecap="round"/>
+                    <path d="M41 36 V29 H55 V36" fill="none" stroke="${fg}" stroke-width="3" stroke-linejoin="round"/>
+                    <path d="M36 36 L38 66 H58 L60 36" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linejoin="round"/>
+                `,
+                resetAction: `
+                    <path d="M30 48 A18 18 0 1 1 36 61" fill="none" stroke="${fg}" stroke-width="3.4" stroke-linecap="round"/>
+                    <polyline points="25,42 30,49 38,44" fill="none" stroke="${fg}" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                carSpecs: `
+                    <path d="M27 57 A21 21 0 0 1 69 57" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linecap="round"/>
+                    <line x1="48" y1="57" x2="61" y2="43" stroke="${fg}" stroke-width="3.4" stroke-linecap="round"/>
+                    <circle cx="48" cy="57" r="3.8" fill="${fg}"/>
+                `,
+                freedrive: `
+                    <polygon points="48,26 67,48 48,70 29,48" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linejoin="round"/>
+                    <polygon points="48,37 55,48 48,45 41,48" fill="${fg}"/>
+                `,
+                music: `
+                    <polygon points="30,35 47,48 30,61" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linejoin="round"/>
+                    <polygon points="49,35 66,48 49,61" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linejoin="round"/>
+                `,
+                camera: `
+                    <rect x="25" y="34" width="46" height="29" rx="6" fill="none" stroke="${fg}" stroke-width="3.2"/>
+                    <path d="M38 34 L42 28 H54 L58 34" fill="none" stroke="${fg}" stroke-width="2.8" stroke-linejoin="round"/>
+                    <circle cx="48" cy="48.5" r="7.5" fill="none" stroke="${fg}" stroke-width="3"/>
+                `,
+                lookback: `
+                    <path d="M35 39 H54 A11 11 0 0 1 54 61 H36" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linecap="round"/>
+                    <polyline points="39,32 29,39 39,46" fill="none" stroke="${fg}" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+                `,
+                pause: `
+                    <line x1="40" y1="33" x2="40" y2="63" stroke="${fg}" stroke-width="5" stroke-linecap="round"/>
+                    <line x1="56" y1="33" x2="56" y2="63" stroke="${fg}" stroke-width="5" stroke-linecap="round"/>
+                `,
+
+                // Чистые круглые кнопки геймпада для меню (из gamepad_menu_buttons.html)
+                padA: `<text x="48" y="48" dy="0.35em" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-weight="800" font-size="33">A</text>`,
+                padB: `<text x="48" y="48" dy="0.35em" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-weight="800" font-size="33">B</text>`,
+                padX: `<text x="48" y="48" dy="0.35em" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-weight="800" font-size="33">X</text>`,
+                padY: `<text x="48" y="48" dy="0.35em" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-weight="800" font-size="33">Y</text>`,
+                padL: `<text x="48" y="48" dy="0.35em" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-weight="800" font-size="31">L</text>`,
+                padR: `<text x="48" y="48" dy="0.35em" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-weight="800" font-size="31">R</text>`,
+                padZL: `<text x="48" y="48" dy="0.35em" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-weight="800" font-size="27">ZL</text>`,
+                padZR: `<text x="48" y="48" dy="0.35em" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-weight="800" font-size="27">ZR</text>`,
+                padPlus: `<path fill="#ffffff" d="M45.2 34h5.6v11.2H62v5.6H50.8V62h-5.6V50.8H34v-5.6h11.2V34z"/>`,
+                padMinus: `<rect x="34" y="45.2" width="28" height="5.6" rx="1.6" fill="#ffffff"/>`,
+                dpadUp: `<polygon fill="#ffffff" points="48,33 63,56 33,56"/>`,
+                dpadDown: `<polygon fill="#ffffff" points="48,63 63,40 33,40"/>`,
+                dpadLeft: `<polygon fill="#ffffff" points="33,48 56,33 56,63"/>`,
+                dpadRight: `<polygon fill="#ffffff" points="63,48 40,33 40,63"/>`,
+                stickL: `
+                    <circle cx="48" cy="48" r="19" fill="rgba(255, 255, 255, 0.20)" stroke="rgba(255, 255, 255, 0.88)" stroke-width="2.2"/>
+                    <text x="48" y="48" dy="0.35em" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-weight="800" font-size="18">L</text>
+                `,
+                stickR: `
+                    <circle cx="48" cy="48" r="19" fill="rgba(255, 255, 255, 0.20)" stroke="rgba(255, 255, 255, 0.88)" stroke-width="2.2"/>
+                    <text x="48" y="48" dy="0.35em" text-anchor="middle" fill="#ffffff" font-family="Inter, sans-serif" font-weight="800" font-size="18">R</text>
+                `
+            };
+
+            const isMenuPad = icon.startsWith('pad') || icon.startsWith('dpad') || icon.startsWith('stickL') || icon.startsWith('stickR');
+            if (isMenuPad) {
+                return `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 96 96">
+                        <circle cx="48" cy="48" r="42"
+                                fill="rgba(12, 16, 22, 0.42)"
+                                stroke="rgba(255, 255, 255, 0.42)"
+                                stroke-width="2"/>
+                        <g opacity="0.92">
+                            ${glyphs[icon] || glyphs.padA}
+                        </g>
+                    </svg>
+                `;
+            }
+
+            return `
+                <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 96 96">
+                    <rect x="6" y="6" width="84" height="84" rx="26"
+                          fill="${bg}"
+                          stroke="${stroke}"
+                          stroke-width="2.2"/>
+                    <rect x="7" y="7" width="82" height="82" rx="25"
+                          fill="${tint}"/>
+                    ${glyphs[icon] || glyphs.confirm}
+                </svg>
+            `;
+        }
+
+        // =========================================================================
+        // 3. РАСКЛАДКИ HUD (ГОНКА + МЕНЮ / ГАРАЖ БЕЗ КОНСОЛЬНЫХ БУКВ) И АТЛАС (32)
+        // =========================================================================
+        const defaultRaceLayout = {
+            steerLeft:   { id: 'steerLeft',   label: 'Влево',      tag: 'ВЛЕВО',    icon: 'left',       accent: 'scpd',    group: 'buttons', x: 10, y: 76, baseSize: 74, scale: 1 },
+            steerRight:  { id: 'steerRight',  label: 'Вправо',     tag: 'ВПРАВО',   icon: 'right',      accent: 'scpd',    group: 'buttons', x: 22, y: 76, baseSize: 74, scale: 1 },
+            analogStick: { id: 'analogStick', label: 'Стик',       tag: 'СТИК',     icon: 'stick',      accent: 'scpd',    group: 'stick',   x: 16, y: 74, baseSize: 104, scale: 1 },
+            gyroBadge:   { id: 'gyroBadge',   label: 'Гироскоп',   tag: 'ГИРО',     icon: 'gyro',       accent: 'scpd',    group: 'gyro',    x: 15, y: 76, baseSize: 70, scale: 1 },
+            gas:         { id: 'gas',         label: 'Газ',        tag: 'ГАЗ',      icon: 'gas',        accent: 'racer',   group: 'common',  x: 90, y: 75, baseSize: 78, scale: 1 },
+            brake:       { id: 'brake',       label: 'Тормоз',     tag: 'ТОРМОЗ',   icon: 'brake',      accent: 'danger',  group: 'common',  x: 78, y: 78, baseSize: 68, scale: 1 },
+            handbrake:   { id: 'handbrake',   label: 'Ручник',     tag: 'РУЧНИК',   icon: 'handbrake',  accent: 'racer',   group: 'common',  x: 89, y: 54, baseSize: 60, scale: 1 },
+            nitro:       { id: 'nitro',       label: 'Нитро',      tag: 'НИТРО',    icon: 'nitro',      accent: 'scpd',    group: 'common',  x: 79, y: 56, baseSize: 60, scale: 1 },
+            empWeapon:   { id: 'empWeapon',   label: 'ЭМИ',        tag: 'ЭМИ',      icon: 'emp',        accent: 'scpd',    group: 'common',  x: 10, y: 44, baseSize: 56, scale: 1 },
+            spikeStrip:  { id: 'spikeStrip',  label: 'Шипы',       tag: 'ШИПЫ',     icon: 'spikes',     accent: 'scpd',    group: 'common',  x: 20, y: 44, baseSize: 56, scale: 1 },
+            roadblock:   { id: 'roadblock',   label: 'Блокпост',   tag: 'БЛОКПОСТ', icon: 'roadblock',  accent: 'scpd',    group: 'common',  x: 10, y: 27, baseSize: 54, scale: 1 },
+            heli:        { id: 'heli',        label: 'Вертолёт',   tag: 'ВЕРТОЛЁТ', icon: 'heli',       accent: 'scpd',    group: 'common',  x: 20, y: 27, baseSize: 54, scale: 1 },
+            turbo:       { id: 'turbo',       label: 'Турбо',      tag: 'ТУРБО',    icon: 'turbo',      accent: 'racer',   group: 'common',  x: 89, y: 36, baseSize: 56, scale: 1 },
+            jammer:      { id: 'jammer',      label: 'Подавитель', tag: 'ГЛУШИЛКА', icon: 'jammer',     accent: 'racer',   group: 'common',  x: 79, y: 38, baseSize: 54, scale: 1 },
+            siren:       { id: 'siren',       label: 'Сирена',     tag: 'СИРЕНА',   icon: 'siren',      accent: 'scpd',    group: 'common',  x: 30, y: 20, baseSize: 50, scale: 1 },
+            headlights:  { id: 'headlights',  label: 'Фары',       tag: 'ФАРЫ',     icon: 'headlights', accent: 'amber',   group: 'common',  x: 38, y: 20, baseSize: 50, scale: 1 },
+            musicSkip:   { id: 'musicSkip',   label: 'Трек →',     tag: 'ТРЕК →',   icon: 'music',      accent: 'neutral', group: 'common',  x: 46, y: 20, baseSize: 50, scale: 1 },
+            pause:       { id: 'pause',       label: 'Пауза',      tag: 'ПАУЗА',    icon: 'pause',      accent: 'neutral', group: 'common',  x: 54, y: 19, baseSize: 50, scale: 1 },
+            camera:      { id: 'camera',      label: 'Камера',     tag: 'КАМЕРА',   icon: 'camera',     accent: 'neutral', group: 'common',  x: 62, y: 20, baseSize: 50, scale: 1 },
+            lookBack:    { id: 'lookBack',    label: 'Назад',      tag: 'НАЗАД',    icon: 'lookback',   accent: 'neutral', group: 'common',  x: 70, y: 20, baseSize: 50, scale: 1 }
+        };
+
+        const defaultGarageMenuLayout = {
+            navUp:       { id: 'navUp',       label: 'Вверх',          tag: 'ВВЕРХ',  icon: 'dpadUp',    accent: 'neutral', x: 14, y: 40, baseSize: 54, scale: 1 },
+            navDown:     { id: 'navDown',     label: 'Вниз',           tag: 'ВНИЗ',   icon: 'dpadDown',  accent: 'neutral', x: 14, y: 66, baseSize: 54, scale: 1 },
+            navLeft:     { id: 'navLeft',     label: 'Влево',          tag: 'ВЛЕВО',  icon: 'dpadLeft',  accent: 'neutral', x: 7,  y: 53, baseSize: 54, scale: 1 },
+            navRight:    { id: 'navRight',    label: 'Вправо',         tag: 'ВПРАВО', icon: 'dpadRight', accent: 'neutral', x: 21, y: 53, baseSize: 54, scale: 1 },
+            stickLeft:   { id: 'stickLeft',   label: 'Левый стик (L)', tag: 'L',      icon: 'stickL',    accent: 'neutral', x: 31, y: 74, baseSize: 76, scale: 1 },
+            stickRight:  { id: 'stickRight',  label: 'Правый стик (R)',tag: 'R',      icon: 'stickR',    accent: 'neutral', x: 69, y: 74, baseSize: 76, scale: 1 },
+            actY:        { id: 'actY',        label: 'Кнопка Y',       tag: 'Y',      icon: 'padY',      accent: 'amber',   x: 85, y: 40, baseSize: 58, scale: 1 },
+            actX:        { id: 'actX',        label: 'Кнопка X',       tag: 'X',      icon: 'padX',      accent: 'scpd',    x: 76, y: 55, baseSize: 58, scale: 1 },
+            actB:        { id: 'actB',        label: 'Кнопка B',       tag: 'B',      icon: 'padB',      accent: 'racer',   x: 93, y: 55, baseSize: 58, scale: 1 },
+            actA:        { id: 'actA',        label: 'Кнопка A',       tag: 'A',      icon: 'padA',      accent: 'confirm', x: 85, y: 71, baseSize: 62, scale: 1 },
+            btnZL:       { id: 'btnZL',       label: 'Триггер ZL',     tag: 'ZL',     icon: 'padZL',     accent: 'neutral', x: 11, y: 21, baseSize: 52, scale: 1 },
+            btnL:        { id: 'btnL',        label: 'Бампер L',       tag: 'L',      icon: 'padL',      accent: 'scpd',    x: 23, y: 21, baseSize: 52, scale: 1 },
+            btnMinus:    { id: 'btnMinus',    label: 'Кнопка −',       tag: '−',      icon: 'padMinus',  accent: 'neutral', x: 43, y: 21, baseSize: 50, scale: 1 },
+            btnPlus:     { id: 'btnPlus',     label: 'Кнопка +',       tag: '+',      icon: 'padPlus',   accent: 'neutral', x: 57, y: 21, baseSize: 50, scale: 1 },
+            btnR:        { id: 'btnR',        label: 'Бампер R',       tag: 'R',      icon: 'padR',      accent: 'scpd',    x: 77, y: 21, baseSize: 52, scale: 1 },
+            btnZR:       { id: 'btnZR',       label: 'Триггер ZR',     tag: 'ZR',     icon: 'padZR',     accent: 'neutral', x: 89, y: 21, baseSize: 52, scale: 1 }
+        };
+
+        const hudAtlasCategories = [
+            {
+                title: 'Навигация по меню (9)',
+                buttons: [
+                    { id: 'nav_select',   name: 'Кнопка A',  tag: 'A',      icon: 'padA',      accent: 'confirm' },
+                    { id: 'nav_back',     name: 'Кнопка B',  tag: 'B',      icon: 'padB',      accent: 'racer' },
+                    { id: 'nav_pause',    name: 'Кнопка +',  tag: '+',      icon: 'padPlus',   accent: 'neutral' },
+                    { id: 'nav_tab_prev', name: 'Бампер L',  tag: 'L',      icon: 'padL',      accent: 'scpd' },
+                    { id: 'nav_tab_next', name: 'Бампер R',  tag: 'R',      icon: 'padR',      accent: 'scpd' },
+                    { id: 'nav_up',       name: 'Вверх',     tag: 'ВВЕРХ',  icon: 'dpadUp',    accent: 'neutral' },
+                    { id: 'nav_down',     name: 'Вниз',      tag: 'ВНИЗ',   icon: 'dpadDown',  accent: 'neutral' },
+                    { id: 'nav_left',     name: 'Влево',     tag: 'ВЛЕВО',  icon: 'dpadLeft',  accent: 'neutral' },
+                    { id: 'nav_right',    name: 'Вправо',    tag: 'ВПРАВО', icon: 'dpadRight', accent: 'neutral' }
+                ]
+            },
+            {
+                title: 'Гараж, покраска, винилы, карта и фоторежим (15)',
+                buttons: [
+                    { id: 'paint',        name: 'Кнопка Y',        tag: 'Y',     icon: 'padY',      accent: 'amber' },
+                    { id: 'wrap',         name: 'Кнопка X',        tag: 'X',     icon: 'padX',      accent: 'amber' },
+                    { id: 'layers',       name: 'Кнопка −',        tag: '−',     icon: 'padMinus',  accent: 'scpd' },
+                    { id: 'rotate_left',  name: 'Триггер ZL',      tag: 'ZL',    icon: 'padZL',     accent: 'neutral' },
+                    { id: 'rotate_right', name: 'Триггер ZR',      tag: 'ZR',    icon: 'padZR',     accent: 'neutral' },
+                    { id: 'zoom_in',      name: 'Левый стик (L)',  tag: 'L',     icon: 'stickL',    accent: 'neutral' },
+                    { id: 'zoom_out',     name: 'Правый стик (R)', tag: 'R',     icon: 'stickR',    accent: 'neutral' },
+                    { id: 'orbit_360',    name: 'Обзор 360°',      tag: 'ОБЗОР', icon: 'orbit360',  accent: 'scpd' },
+                    { id: 'delete_layer', name: 'Удалить',         tag: 'УДАЛИТЬ',icon: 'deleteLayer', accent: 'danger' },
+                    { id: 'reset_action', name: 'Сброс',           tag: 'СБРОС', icon: 'resetAction', accent: 'racer' },
+                    { id: 'photo_mode',   name: 'Фоторежим',       tag: 'ФОТО',  icon: 'camera',    accent: 'scpd' },
+                    { id: 'freedrive',    name: 'Свободный заезд', tag: 'ЗАЕЗД', icon: 'freedrive', accent: 'confirm' },
+                    { id: 'car_specs',    name: 'Детали авто',     tag: 'ДЕТАЛИ',icon: 'carSpecs',  accent: 'scpd' },
+                    { id: 'music_skip',   name: 'Следующий трек',  tag: 'ТРЕК →',icon: 'music',     accent: 'neutral' },
+                    { id: 'lookback',     name: 'Взгляд назад',    tag: 'НАЗАД', icon: 'lookback',  accent: 'neutral' }
+                ]
+            }
+        ];
+
+        // =========================================================================
+        // 3.5 ЛОКАЛИЗАЦИЯ ИНТЕРФЕЙСА (RU / EN)
+        // =========================================================================
+        const i18nDict = {
+            ru: {
+                play: 'ИГРАТЬ',
+                settings: 'НАСТРОЙКИ',
+                downloadLog: 'СКАЧАТЬ ЛОГ',
+                tabControls: 'Управление',
+                tabGraphics: 'Графика',
+                toMain: 'На главный',
+                back: 'Назад',
+                reset: 'Сброс',
+                configure: 'Настроить',
+                off: 'Выкл',
+                on: 'Вкл',
+                fsrOff: 'FSR Выкл',
+                fsrQuality: 'FSR Качество',
+                fsrBalanced: 'FSR Баланс',
+                fsrPerf: 'FSR Произв.',
+                quality: 'Качество',
+                balanced: 'Баланс',
+                perf: 'Произв.',
+                noLimit: 'Без лимита',
+                noLimitFps: 'Без лимита FPS',
+                low: 'Низкие',
+                medium: 'Средние',
+                high: 'Высокие',
+                lowF: 'Низкая',
+                mediumF: 'Средняя',
+                highF: 'Высокая',
+                device: 'Устройство',
+                touch: 'Сенсор',
+                gamepad: 'Геймпад',
+                steerType: 'Тип руля',
+                buttons: 'Кнопки',
+                stick: 'Стик',
+                gyro: 'Гироскоп',
+                hudLayout: 'Расположение кнопок',
+                deadzone: 'Мёртвая зона',
+                sensitivity: 'Чувствительность',
+                hudOpacity: 'Прозрачность кнопок',
+                hudSize: 'Размер кнопок',
+                autoGas: 'Автогаз',
+                vibration: 'Вибрация',
+                resolution: 'Разрешение',
+                fsrSharpness: 'Резкость FSR',
+                fpsLimit: 'Ограничение FPS',
+                shadows: 'Динамические тени',
+                aniso: 'Анизотропная фильтрация',
+                aa: 'Сглаживание',
+                reflections: 'Отражения',
+                drawDistance: 'Детализация мира',
+                vulkanDriver: 'Рендер Vulkan',
+                system: 'Системный',
+                shaderCache: 'Кэш шейдеров',
+                presetRace: 'Гонка',
+                presetMenu: 'Меню / Гараж',
+                atlasBtn: 'Атлас кнопок',
+                exportAtlasPng: 'Весь атлас PNG',
+                launchTitle: 'Запуск Vulkan / nx2android',
+                cancel: 'Отмена',
+                launchStep1: 'Инициализация драйвера Vulkan...',
+                launchStep2: 'Настройка рендера {res} и FSR...',
+                launchStep3: 'Подготовка кэша шейдеров SPIR-V...',
+                launchStep4: 'Запуск Seacrest County...',
+                toastVulkanReady: 'Vulkan готов',
+                toastLogSaved: 'Файл сохранён',
+                toastLayoutReset: 'Раскладка сброшена',
+                toastLayoutResetSub: 'Стандартное расположение',
+                openSettingsTitle: 'Открыть настройки графики'
+            },
+            en: {
+                play: 'PLAY',
+                settings: 'SETTINGS',
+                downloadLog: 'DOWNLOAD LOG',
+                tabControls: 'Controls',
+                tabGraphics: 'Graphics',
+                toMain: 'Main Menu',
+                back: 'Back',
+                reset: 'Reset',
+                configure: 'Customize',
+                off: 'Off',
+                on: 'On',
+                fsrOff: 'FSR Off',
+                fsrQuality: 'FSR Quality',
+                fsrBalanced: 'FSR Balanced',
+                fsrPerf: 'FSR Perf.',
+                quality: 'Quality',
+                balanced: 'Balanced',
+                perf: 'Perf.',
+                noLimit: 'Unlimited',
+                noLimitFps: 'Unlimited FPS',
+                low: 'Low',
+                medium: 'Medium',
+                high: 'High',
+                lowF: 'Low',
+                mediumF: 'Medium',
+                highF: 'High',
+                device: 'Input Device',
+                touch: 'Touch',
+                gamepad: 'Gamepad',
+                steerType: 'Steering Mode',
+                buttons: 'Buttons',
+                stick: 'Stick',
+                gyro: 'Gyro',
+                hudLayout: 'HUD Button Layout',
+                deadzone: 'Deadzone',
+                sensitivity: 'Sensitivity',
+                hudOpacity: 'Button Opacity',
+                hudSize: 'Button Scale',
+                autoGas: 'Auto-Accelerate',
+                vibration: 'Vibration',
+                resolution: 'Resolution',
+                fsrSharpness: 'FSR Sharpness',
+                fpsLimit: 'FPS Limit',
+                shadows: 'Dynamic Shadows',
+                aniso: 'Anisotropic Filtering',
+                aa: 'Anti-Aliasing',
+                reflections: 'Reflections',
+                drawDistance: 'World Detail',
+                vulkanDriver: 'Vulkan Driver',
+                system: 'System',
+                shaderCache: 'Shader Cache',
+                presetRace: 'Race',
+                presetMenu: 'Menu / Garage',
+                atlasBtn: 'Button Atlas',
+                exportAtlasPng: 'Full Atlas PNG',
+                launchTitle: 'Launching Vulkan / nx2android',
+                cancel: 'Cancel',
+                launchStep1: 'Initializing Vulkan driver...',
+                launchStep2: 'Configuring {res} render & FSR...',
+                launchStep3: 'Compiling SPIR-V shader cache...',
+                launchStep4: 'Entering Seacrest County...',
+                toastVulkanReady: 'Vulkan Ready',
+                toastLogSaved: 'Log Saved',
+                toastLayoutReset: 'Layout Reset',
+                toastLayoutResetSub: 'Default HUD positions restored',
+                openSettingsTitle: 'Open graphics settings'
+            }
+        };
+
+        const hudNodeLabelsEn = {
+            steerLeft: 'Steer Left', steerRight: 'Steer Right', analogStick: 'Analog Stick', gyroBadge: 'Gyroscope',
+            gas: 'Throttle', brake: 'Brake', handbrake: 'Handbrake', nitro: 'Nitrous',
+            empWeapon: 'EMP', spikeStrip: 'Spike Strip', roadblock: 'Roadblock', heli: 'Helicopter',
+            turbo: 'Turbo', jammer: 'Jammer', siren: 'Siren', headlights: 'Headlights',
+            pause: 'Pause', camera: 'Camera', lookBack: 'Look Back', musicSkip: 'Next Track',
+            navUp: 'D-Pad Up', navDown: 'D-Pad Down', navLeft: 'D-Pad Left', navRight: 'D-Pad Right',
+            stickLeft: 'Left Stick (L)', stickRight: 'Right Stick (R)',
+            actY: 'Button Y', actX: 'Button X', actB: 'Button B', actA: 'Button A',
+            btnZL: 'Trigger ZL', btnL: 'Bumper L', btnMinus: 'Button −',
+            btnPlus: 'Button +', btnR: 'Bumper R', btnZR: 'Trigger ZR'
+        };
+
+        function t(key) {
+            const lang = state.lang || 'ru';
+            return (i18nDict[lang] && i18nDict[lang][key]) || i18nDict.ru[key] || key;
+        }
+
+        function getHudNodeLabel(btn) {
+            if (state.lang === 'en' && hudNodeLabelsEn[btn.id]) return hudNodeLabelsEn[btn.id];
+            return btn.label;
+        }
+
+        function toggleLanguage() {
+            state.lang = state.lang === 'ru' ? 'en' : 'ru';
+            renderApp();
+        }
+
+        // =========================================================================
+        // 4. СОСТОЯНИЕ ПРИЛОЖЕНИЯ (ЕДИНЫЙ ИСТОЧНИК ДАННЫХ ДЛЯ ВСЕХ ЭКРАНОВ)
+        // =========================================================================
+        const state = {
+            lang: 'ru',              // 'ru' | 'en'
+            viewMode: 'single',      // 'single' | 'collage'
+            currentScreen: 'main',   // 'main' | 'controls' | 'graphics' | 'hud'
+            customBgUrl: 'bg.png',
+            isLaunching: false,
+            launchStage: '',
+            launchPercent: 0,
+            logCopied: false,
+            hudPreset: 'race',       // 'race' | 'menu'
+            selectedHudId: 'gas',
+            showAtlasDrawer: false,
+            controls: {
+                device: 'touch',       // 'touch' | 'gamepad'
+                steering: 'buttons',   // 'buttons' | 'stick' | 'gyro'
+                deadzone: 8,
+                sensitivity: 100,
+                hudOpacity: 88,
+                hudSize: 105,
+                autoGas: false,
+                vibration: true,
+                raceLayout: JSON.parse(JSON.stringify(defaultRaceLayout)),
+                menuLayout: JSON.parse(JSON.stringify(defaultGarageMenuLayout))
+            },
+            graphics: {
+                gmem: true,             // true = TU_DEBUG=startup,nocb (Adreno), false = TU_DEBUG=startup,nocb,sysmem (MTK)
+                resolution: '720p',     // '540p' | '720p' | '1080p'
+                fpsLimit: '60',         // '30' | '60' | 'unlimited'
+                anisotropic: '4x',      // 'off' | '2x' | '4x' | '8x' | '16x'
+                vulkanDriver: 'turnip', // 'turnip' | 'system'
+                shaderCache: true,
+                dmVkNocull: true
+            }
+        };
+
+        // =========================================================================
+        // 5. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ТЕЛЕМЕТРИИ И ОБЩИХ ЭЛЕМЕНТОВ ИНТЕРФЕЙСА
+        // =========================================================================
+        function getTelemetrySummary() {
+            const g = state.graphics;
+            const c = state.controls;
+            const steerLabels = {
+                buttons: t('buttons'),
+                stick: t('stick'),
+                gyro: t('gyro')
+            };
+            const inputLabel = c.device === 'gamepad' ? t('gamepad') : (steerLabels[c.steering] || t('buttons'));
+            const fpsLabel = g.fpsLimit === 'unlimited' ? '120 FPS' : `${g.fpsLimit} FPS`;
+            const gmemLabel = g.gmem ? 'GMEM' : 'Sysmem';
+            const drvLabel = g.vulkanDriver === 'turnip' ? 'Turnip' : 'System VK';
+            return `${g.resolution} • ${fpsLabel} • ${gmemLabel} • ${drvLabel} • ${inputLabel}`;
+        }
+
+        function renderSettingsHeader(activeTab) {
+            const tabs = [
+                { id: 'controls', label: t('tabControls'), accent: 'scpd' },
+                { id: 'graphics', label: t('tabGraphics'), accent: 'racer' }
+            ];
+
+            return `
+                <div class="flex flex-col gap-2 flex-shrink-0">
+                    <div class="flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-1.5">
+                            ${tabs.map(tab => {
+                                const isActive = activeTab === tab.id;
+                                const activeStyle = tab.accent === 'racer'
+                                    ? 'bg-[#e63917] text-white border-[#ff8a70] shadow-[0_4px_14px_rgba(230,57,23,0.35)]'
+                                    : 'bg-[#0072e5] text-white border-[#66b5ff] shadow-[0_4px_14px_rgba(0,114,229,0.35)]';
+                                return `
+                                    <button type="button" onclick="navigateTo('${tab.id}')"
+                                        class="hp-tap-target px-4 py-1.5 text-xs font-extrabold uppercase tracking-wider border rounded cursor-pointer ${isActive
+                                            ? activeStyle
+                                            : 'bg-white/5 hover:bg-white/12 text-slate-300 hover:text-white border-white/15'}">
+                                        ${tab.label}
+                                    </button>
+                                `;
+                            }).join('')}
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="toggleLanguage()"
+                                class="hp-tap-target px-2.5 py-1.5 bg-white/8 hover:bg-white/16 border border-white/20 rounded font-mono text-[11px] font-bold text-slate-200 hover:text-white cursor-pointer">
+                                ${state.lang === 'ru' ? 'RU / EN' : 'EN / RU'}
+                            </button>
+
+                            <button type="button" onclick="navigateTo('main')"
+                                class="hp-tap-target px-3.5 py-1.5 bg-white/10 hover:bg-[#e63917] border border-white/25 rounded text-[11px] font-extrabold uppercase tracking-wider text-white cursor-pointer">
+                                ${t('toMain')}
+                            </button>
+                        </div>
+                    </div>
+                    <div class="scpd-lightbar"></div>
+                </div>
+            `;
+        }
+
+        function renderSettingRow(label, controlHtml) {
+            return `
+                <div class="hp-glass-row px-3 py-1.5 flex items-center justify-between gap-2 min-h-[38px]">
+                    <span class="text-xs font-bold text-slate-100 truncate">${label}</span>
+                    <div class="flex-shrink-0">${controlHtml}</div>
+                </div>
+            `;
+        }
+
+        function renderAngledSelector(options, currentValue, callbackName, accentTheme = 'scpd') {
+            const activeBg = accentTheme === 'racer'
+                ? 'bg-[#e63917] text-white border-[#ff8a70]'
+                : 'bg-[#0072e5] text-white border-[#66b5ff]';
+
+            return `
+                <div class="inline-flex items-center gap-1">
+                    ${options.map(opt => {
+                        const isActive = String(currentValue) === String(opt.id);
+                        return `
+                            <button type="button" onclick="${callbackName}('${opt.id}')"
+                                class="hp-tap-target px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide border rounded cursor-pointer whitespace-nowrap ${isActive
+                                    ? activeBg
+                                    : 'bg-black/35 hover:bg-white/12 text-slate-300 hover:text-white border-white/15'}">
+                                ${opt.label}
+                            </button>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+
+        // =========================================================================
+        // 6. ЭКРАН 1 — ГЛАВНЫЙ ЭКРАН (ЖИВАЯ СЦЕНА ПОГОНИ + НИЖНИЙ ЛЕВЫЙ HUD-БАР)
+        // =========================================================================
+        function renderMainScreen() {
+            const animClass = state.animateScreen ? 'hp-screen-enter' : '';
+            return `
+                <div class="device-screen">
+                    ${renderWallpaperLayers()}
+
+                    <!-- Оверлей запуска конвейера Vulkan / nx2android -->
+                    ${state.isLaunching ? `
+                        <div class="absolute inset-0 z-30 bg-[#06090e]/75 backdrop-blur-md flex items-center justify-center p-4">
+                            <div class="hp-glass-panel hp-panel-enter w-full max-w-md p-5 space-y-3.5">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs font-extrabold uppercase tracking-widest text-white">${t('launchTitle')}</span>
+                                    <button type="button" onclick="cancelLaunch()"
+                                        class="hp-tap-target px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded text-[11px] font-bold text-slate-200 cursor-pointer">
+                                        ${t('cancel')}
+                                    </button>
+                                </div>
+                                <div class="scpd-lightbar"></div>
+                                <div class="space-y-1.5">
+                                    <div class="flex justify-between text-xs font-semibold">
+                                        <span class="text-slate-200">${state.launchStage}</span>
+                                        <span class="font-mono text-[#66b5ff]">${state.launchPercent}%</span>
+                                    </div>
+                                    <div class="w-full h-2 bg-black/60 border border-white/15 rounded overflow-hidden">
+                                        <div class="h-full bg-gradient-to-r from-[#e63917] to-[#0072e5] transition-all duration-300"
+                                            style="width: ${state.launchPercent}%"></div>
+                                    </div>
+                                </div>
+                                <div class="font-mono text-[11px] text-slate-200 bg-black/45 border border-white/10 rounded px-3 py-2">
+                                    ${getTelemetrySummary()} • ${state.graphics.vulkanDriver === 'turnip' ? 'Turnip' : t('system')}
+                                </div>
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Контент главного экрана: обе машины полностью открыты, UI деликатно вписан по краям -->
+                    <div class="relative z-10 flex-1 h-full flex flex-col justify-between p-4 sm:p-5 ${animClass}">
+                        <!-- Верхняя строка: Фирменный заголовок слева (без глухого ящика) + компактная телеметрия справа -->
+                        <div class="flex items-start justify-between gap-3">
+                            <!-- Титульный блок в стиле Criterion Games -->
+                            <div class="select-none">
+                                <div class="text-[10px] sm:text-[11px] font-extrabold uppercase tracking-[0.26em] text-slate-100 hp-title-shadow">
+                                    NEED FOR SPEED™
+                                </div>
+                                <div class="flex items-baseline gap-2">
+                                    <span class="text-xl sm:text-[26px] font-black uppercase italic tracking-tight text-white leading-none hp-title-shadow">
+                                        HOT PURSUIT
+                                    </span>
+                                    <span class="text-[10px] sm:text-xs font-black uppercase tracking-[0.22em] text-[#ff5733] hp-title-shadow">
+                                        REMASTERED
+                                    </span>
+                                </div>
+                                <div class="scpd-lightbar w-44 sm:w-56 mt-1.5"></div>
+                            </div>
+
+                            <!-- Компактная плашка текущей конфигурации и кнопка языка в правом верхнем углу -->
+                            <div class="flex items-center gap-2">
+                                <button type="button" onclick="navigateTo('graphics')" title="${t('openSettingsTitle')}"
+                                    class="hp-telemetry-pill px-3 py-1.5 hidden sm:flex items-center gap-2 hover:border-white/40 transition-colors cursor-pointer">
+                                    <span class="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]"></span>
+                                    <span class="font-mono text-[11px] font-bold text-white whitespace-nowrap">${getTelemetrySummary()}</span>
+                                </button>
+
+                                <button type="button" onclick="toggleLanguage()" title="Сменить язык / Switch language"
+                                    class="hp-btn-glass px-3 py-1.5 flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+                                    <svg class="w-3.5 h-3.5 text-[#66b5ff] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+                                    </svg>
+                                    <span class="font-mono text-[11px] font-extrabold text-white">${state.lang === 'ru' ? 'RU' : 'EN'}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Нижний левый ряд кнопок: лежит на размытом асфальте под бампером, не перекрывая ни одну из машин -->
+                        <div class="flex flex-wrap items-center gap-2 sm:gap-2.5">
+                            <!-- ИГРАТЬ -->
+                            <button type="button" onclick="startGameLaunch()"
+                                class="hp-btn-play px-5 sm:px-6 h-10 sm:h-11 flex items-center gap-2.5 cursor-pointer whitespace-nowrap">
+                                <svg class="w-4 h-4 text-white fill-current flex-shrink-0" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                                <span class="text-xs sm:text-sm font-black uppercase tracking-wider text-white">${t('play')}</span>
+                            </button>
+
+                            <!-- НАСТРОЙКИ -->
+                            <button type="button" onclick="navigateTo('controls')"
+                                class="hp-btn-glass px-4 sm:px-5 h-10 sm:h-11 flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                                <svg class="w-4 h-4 text-[#5bb0ff] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                <span class="text-xs sm:text-[13px] font-extrabold uppercase tracking-wider text-white">${t('settings')}</span>
+                            </button>
+
+                            <!-- Единая кнопка СКАЧАТЬ ЛОГ -->
+                            <button type="button" onclick="downloadDiagnosticLog()"
+                                class="hp-btn-glass px-4 h-10 sm:h-11 flex items-center gap-2 cursor-pointer whitespace-nowrap">
+                                <svg class="w-4 h-4 text-[#ff7b59] flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+                                </svg>
+                                <span class="text-xs sm:text-[13px] font-extrabold uppercase tracking-wider text-white">${t('downloadLog')}</span>
+                            </button>
+
+                            <!-- Кнопка на GitHub @andrlshk -->
+                            <a href="https://github.com/andrlshk" target="_blank" rel="noopener noreferrer" onclick="if(window.AndroidBridge&&AndroidBridge.openUrl){event.preventDefault();AndroidBridge.openUrl(this.href);}"
+                                class="hp-btn-glass px-4 h-10 sm:h-11 flex items-center gap-2 cursor-pointer whitespace-nowrap no-underline">
+                                <svg class="w-4 h-4 text-slate-200 fill-current flex-shrink-0" viewBox="0 0 24 24">
+                                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+                                </svg>
+                                <span class="font-mono text-xs sm:text-[13px] font-bold text-white">@andrlshk</span>
+                            </a>
+                        </div>
+
+                    </div>
+                </div>
+            `;
+        }
+
+        // =========================================================================
+        // 7. ЭКРАН 2 — НАСТРОЙКИ: УПРАВЛЕНИЕ (2 КОЛОНКИ, ОДНОСТРОЧНЫЕ ПУНКТЫ)
+        // =========================================================================
+        function renderControlsScreen() {
+            const c = state.controls;
+            const animClass = state.animateScreen ? 'hp-panel-enter' : '';
+
+            return `
+                <div class="device-screen">
+                    ${renderWallpaperLayers()}
+
+                    <div class="relative z-10 flex-1 min-h-0 p-3 sm:p-4 flex flex-col">
+                        <div class="hp-glass-panel ${animClass} flex-1 min-h-0 p-3.5 sm:p-4 flex flex-col justify-between gap-2.5 overflow-hidden">
+                            ${renderSettingsHeader('controls')}
+
+                            <!-- 2-колоночная сетка с сбалансированными отступами -->
+                            <div class="flex-1 min-h-0 overflow-y-auto hp-scroll grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 content-center">
+                                
+                                <!-- Левая колонка -->
+                                <div class="flex flex-col gap-2">
+                                    ${renderSettingRow(t('device'), renderAngledSelector([
+                                        { id: 'touch',   label: t('touch') },
+                                        { id: 'gamepad', label: t('gamepad') }
+                                    ], c.device, 'setControlDevice', 'scpd'))}
+
+                                    ${renderSettingRow(t('steerType'), renderAngledSelector([
+                                        { id: 'buttons', label: t('buttons') },
+                                        { id: 'stick',   label: t('stick') },
+                                        { id: 'gyro',    label: t('gyro') }
+                                    ], c.steering, 'setControlSteering', 'racer'))}
+
+                                    ${renderSettingRow(t('hudLayout'), `
+                                        <button type="button" onclick="navigateTo('hud')"
+                                            class="hp-tap-target px-3.5 py-1 bg-[#0072e5] hover:bg-[#1985ff] rounded text-white text-[11px] font-extrabold uppercase tracking-wider cursor-pointer shadow-[0_2px_10px_rgba(0,114,229,0.4)]">
+                                            ${t('configure')}
+                                        </button>
+                                    `)}
+
+                                    ${renderSettingRow(t('deadzone'), `
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="w-24 sm:w-28">
+                                                <input type="range" min="0" max="30" value="${c.deadzone}"
+                                                    oninput="updateSliderLive('deadzone', this.value)"
+                                                    onchange="renderApp()"
+                                                    class="hp-slider">
+                                            </div>
+                                            <span data-val-deadzone class="font-mono text-xs font-bold text-[#66b5ff] w-9 text-right">${c.deadzone}%</span>
+                                        </div>
+                                    `)}
+
+                                    ${renderSettingRow(t('sensitivity'), `
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="w-24 sm:w-28">
+                                                <input type="range" min="50" max="150" value="${c.sensitivity}"
+                                                    oninput="updateSliderLive('sensitivity', this.value)"
+                                                    onchange="renderApp()"
+                                                    class="hp-slider">
+                                            </div>
+                                            <span data-val-sensitivity class="font-mono text-xs font-bold text-[#66b5ff] w-10 text-right">${c.sensitivity}%</span>
+                                        </div>
+                                    `)}
+                                </div>
+
+                                <!-- Правая колонка -->
+                                <div class="flex flex-col gap-2">
+                                    ${renderSettingRow(t('hudOpacity'), `
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="w-24 sm:w-28">
+                                                <input type="range" min="20" max="100" value="${c.hudOpacity}"
+                                                    oninput="updateSliderLive('hudOpacity', this.value)"
+                                                    onchange="renderApp()"
+                                                    class="hp-slider">
+                                            </div>
+                                            <span data-val-hudOpacity class="font-mono text-xs font-bold text-[#66b5ff] w-10 text-right">${c.hudOpacity}%</span>
+                                        </div>
+                                    `)}
+
+                                    ${renderSettingRow(t('hudSize'), `
+                                        <div class="flex items-center gap-2.5">
+                                            <div class="w-24 sm:w-28">
+                                                <input type="range" min="50" max="200" value="${c.hudSize}"
+                                                    oninput="updateSliderLive('hudSize', this.value)"
+                                                    onchange="renderApp()"
+                                                    class="hp-slider">
+                                            </div>
+                                            <span data-val-hudSize class="font-mono text-xs font-bold text-[#ff8a70] w-11 text-right">${c.hudSize}%</span>
+                                        </div>
+                                    `)}
+
+                                    ${renderSettingRow(t('autoGas'), renderAngledSelector([
+                                        { id: 'off', label: t('off') },
+                                        { id: 'on',  label: t('on') }
+                                    ], c.autoGas ? 'on' : 'off', 'setControlAutoGas', 'racer'))}
+
+                                    ${renderSettingRow(t('vibration'), renderAngledSelector([
+                                        { id: 'on',  label: t('on') },
+                                        { id: 'off', label: t('off') }
+                                    ], c.vibration ? 'on' : 'off', 'setControlVibration', 'scpd'))}
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // =========================================================================
+        // 8. ЭКРАН 3 — НАСТРОЙКИ: ГРАФИКА (2 КОЛОНКИ, ОДНОСТРОЧНЫЕ ИГРОВЫЕ ПУНКТЫ)
+        // =========================================================================
+        function renderGraphicsScreen() {
+            const g = state.graphics;
+            const animClass = state.animateScreen ? 'screen-enter' : '';
+            const gmemLabel = state.lang === 'ru' ? 'GMEM (Память тайлов)' : 'GMEM (Tile Memory)';
+            const gmemOnLabel = state.lang === 'ru' ? 'Вкл (Adreno)' : 'On (Adreno)';
+            const gmemOffLabel = state.lang === 'ru' ? 'Выкл (MTK)' : 'Off (MTK)';
+            return `
+                <div class="device-screen">
+                    ${renderWallpaperLayers()}
+
+                    <div class="relative z-10 flex-1 min-h-0 p-3 sm:p-4 flex flex-col">
+                        <div class="hp-glass-panel ${animClass} flex-1 min-h-0 p-3.5 sm:p-4 flex flex-col justify-between gap-2.5 overflow-hidden">
+                            ${renderSettingsHeader('graphics')}
+
+                            <div class="flex-1 min-h-0 overflow-y-auto hp-scroll grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-2 content-center">
+                                <!-- Левая колонка -->
+                                <div class="flex flex-col gap-2">
+                                    ${renderSettingRow(gmemLabel, renderAngledSelector([
+                                        { id: 'on',  label: gmemOnLabel },
+                                        { id: 'off', label: gmemOffLabel }
+                                    ], g.gmem ? 'on' : 'off', 'setGfxGmem', 'racer'))}
+
+                                    ${renderSettingRow(t('resolution'), renderAngledSelector([
+                                        { id: '540p',  label: '540p' },
+                                        { id: '720p',  label: '720p' },
+                                        { id: '1080p', label: '1080p' }
+                                    ], g.resolution, 'setGfxResolution', 'scpd'))}
+
+                                    ${renderSettingRow(t('fpsLimit'), renderAngledSelector([
+                                        { id: '30',        label: '30' },
+                                        { id: '60',        label: '60' },
+                                        { id: 'unlimited', label: '120' }
+                                    ], g.fpsLimit, 'setGfxFps', 'racer'))}
+
+                                    ${renderSettingRow(t('aniso'), renderAngledSelector([
+                                        { id: 'off', label: t('off') },
+                                        { id: '2x',  label: '2x' },
+                                        { id: '4x',  label: '4x' },
+                                        { id: '8x',  label: '8x' },
+                                        { id: '16x', label: '16x' }
+                                    ], g.anisotropic, 'setGfxAniso', 'scpd'))}
+                                </div>
+
+                                <!-- Правая колонка -->
+                                <div class="flex flex-col gap-2">
+                                    <div class="px-3 py-1.5 rounded bg-white/5 border border-white/10 text-[11px] text-slate-300 flex items-center justify-between gap-2">
+                                        <span class="truncate" title="Auto-detected Hardware">${(window.__hwInfo && (window.__hwInfo.socModel || window.__hwInfo.gpuRenderer)) ? ((window.__hwInfo.socModel || 'CPU') + ' • ' + (window.__hwInfo.gpuRenderer || 'GPU')) : 'Snapdragon / MTK Auto'}</span>
+                                        <span class="shrink-0 font-bold text-cyan-300">${(window.__hwInfo && window.__hwInfo.gpuProfile === 'mali_mtk') ? 'MTK/Mali' : (g.vulkanDriver === 'turnip' ? 'Adreno Turnip' : 'System VK')}</span>
+                                    </div>
+                                    ${renderSettingRow(t('vulkanDriver'), renderAngledSelector([
+                                        { id: 'turnip', label: 'Turnip' },
+                                        { id: 'system', label: t('system') }
+                                    ], g.vulkanDriver, 'setGfxVulkan', 'racer'))}
+
+                                    ${renderSettingRow(t('shaderCache'), renderAngledSelector([
+                                        { id: 'on',  label: t('on') },
+                                        { id: 'off', label: t('off') }
+                                    ], g.shaderCache ? 'on' : 'off', 'setGfxShaderCache', 'scpd'))}
+
+                                    ${renderSettingRow('DM_VK_NOCULL', renderAngledSelector([
+                                        { id: 'on',  label: t('on') },
+                                        { id: 'off', label: t('off') }
+                                    ], g.dmVkNocull ? 'on' : 'off', 'setGfxDmVkNocull', 'racer'))}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // =========================================================================
+        // 9. ЭКРАН 4 — РЕДАКТОР РАСПОЛОЖЕНИЯ КНОПОК HUD И АТЛАС (40 КНОПОК)
+        // =========================================================================
+        function getActiveHudMap() {
+            return state.hudPreset === 'menu'
+                ? state.controls.menuLayout
+                : state.controls.raceLayout;
+        }
+
+        function getAdaptiveScreenScale() {
+            const container = document.getElementById('workspaceContainer');
+            const w = container ? container.clientWidth : window.innerWidth;
+            const refW = state.viewMode === 'collage' ? 680 : 1080;
+            return Math.max(0.55, Math.min(1.25, w / refW));
+        }
+
+        function computeHudNodePx(btn) {
+            const globalMult = state.controls.hudSize / 100;
+            const nodeMult = btn.scale || 1;
+            const adaptiveFactor = getAdaptiveScreenScale();
+            return Math.max(28, Math.round(btn.baseSize * nodeMult * globalMult * adaptiveFactor));
+        }
+
+        function renderHudEditorScreen() {
+            const c = state.controls;
+            const isRace = state.hudPreset === 'race';
+            const layoutMap = isRace ? c.raceLayout : c.menuLayout;
+            const defaultKey = isRace ? 'gas' : 'actA';
+            const activeNode = layoutMap[state.selectedHudId] || layoutMap[defaultKey];
+            const nodeScalePct = Math.round((activeNode.scale || 1) * 100);
+            const opacityVal = Math.max(0.2, c.hudOpacity / 100);
+            const totalAtlasCount = hudAtlasCategories.reduce((sum, cat) => sum + cat.buttons.length, 0);
+            const animClass = state.animateScreen ? 'hp-screen-enter' : '';
+
+            const visibleButtons = Object.values(layoutMap).filter(btn => {
+                if (!isRace) return true;
+                if (btn.group === 'common') return true;
+                return btn.group === c.steering;
+            });
+
+            return `
+                <div class="device-screen ${animClass}" style="background: #0a0e15;">
+                    <div class="absolute inset-0 pointer-events-none opacity-30"
+                        style="background-image: linear-gradient(to right, rgba(255,255,255,0.14) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.14) 1px, transparent 1px); background-size: 32px 32px;">
+                    </div>
+
+                    <!-- Верхняя панель инструментов редактора HUD -->
+                    <div class="relative z-20 px-3 pt-2.5 flex flex-wrap items-center justify-between gap-2">
+                        <div class="flex items-center gap-2">
+                            ${renderAngledSelector([
+                                { id: 'race', label: t('presetRace') },
+                                { id: 'menu', label: t('presetMenu') }
+                            ], state.hudPreset, 'setHudPreset', 'racer')}
+
+                            <!-- Масштаб выбранной кнопки (50% - 200%) -->
+                            <div class="hp-telemetry-pill px-2.5 py-1 flex items-center gap-2">
+                                <span data-hud-active-label class="text-[11px] font-bold text-white whitespace-nowrap">${getHudNodeLabel(activeNode)}</span>
+                                <div class="w-16 sm:w-24">
+                                    <input type="range" min="50" max="200" value="${nodeScalePct}"
+                                        oninput="updateSingleHudScale(this.value)"
+                                        onchange="renderApp()"
+                                        class="hp-slider">
+                                </div>
+                                <span data-hud-active-pct class="font-mono text-[10.5px] font-bold text-[#ff8a70] w-10 text-right">${nodeScalePct}%</span>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center gap-1.5">
+                            <button type="button" onclick="resetHudLayout()"
+                                class="hp-btn-glass px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-slate-200 hover:text-white cursor-pointer">
+                                ${t('reset')}
+                            </button>
+
+                            <button type="button" onclick="toggleAtlasDrawer()"
+                                class="hp-tap-target px-3 py-1 rounded text-[11px] font-extrabold uppercase tracking-wider cursor-pointer ${state.showAtlasDrawer
+                                    ? 'bg-[#e63917] text-white'
+                                    : 'bg-[#0072e5] hover:bg-[#1985ff] text-white'}">
+                                ${t('atlasBtn')} (${totalAtlasCount})
+                            </button>
+
+                            <button type="button" onclick="navigateTo('controls')"
+                                class="hp-btn-glass px-3 py-1 text-[11px] font-extrabold uppercase tracking-wider text-white cursor-pointer">
+                                ${t('back')}
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Выдвижная панель АТЛАСА КНОПОК (38 лёгких кнопок + Switch Garage с экспортом PNG/SVG) -->
+                    ${state.showAtlasDrawer ? `
+                        <div class="hp-panel-enter absolute inset-x-3 top-12 bottom-3 z-30 hp-glass-panel p-3.5 flex flex-col overflow-hidden">
+                            <div class="flex items-center justify-between pb-2 mb-2 border-b border-white/15 flex-shrink-0">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-1.5 h-4 rounded-sm bg-gradient-to-b from-[#e63917] to-[#0072e5]"></span>
+                                    <span class="text-xs sm:text-sm font-extrabold uppercase tracking-wider text-white">${t('atlasBtn')} (${totalAtlasCount})</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" onclick="exportFullAtlasPng()"
+                                        class="px-3 py-1 bg-[#e63917] hover:bg-[#ff4724] rounded text-white text-[11px] font-bold uppercase tracking-wider cursor-pointer">
+                                        ${t('exportAtlasPng')}
+                                    </button>
+                                    <button type="button" onclick="toggleAtlasDrawer(false)"
+                                        class="px-2.5 py-1 bg-white/10 hover:bg-white/20 rounded text-white text-xs font-bold cursor-pointer">
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="flex-1 min-h-0 overflow-y-auto hp-scroll pr-1 space-y-3">
+                                ${hudAtlasCategories.map(cat => `
+                                    <div class="space-y-1.5">
+                                        <div class="text-[11px] font-extrabold uppercase tracking-wider text-[#66b5ff]">${cat.title}</div>
+                                        <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
+                                            ${cat.buttons.map(b => `
+                                                <div class="hp-glass-row p-1.5 flex flex-col items-center justify-between gap-1">
+                                                    <div class="w-12 h-12 flex items-center justify-center [&>svg]:w-12 [&>svg]:h-12">
+                                                        ${renderHudButtonSvg(b.icon, 48)}
+                                                    </div>
+                                                    <div class="text-[9.5px] font-semibold text-slate-200 text-center truncate w-full">${b.name}</div>
+                                                    <div class="grid grid-cols-2 gap-1 w-full">
+                                                        <button type="button" onclick="exportSingleHudButton('${b.id}', 'png')"
+                                                            class="py-0.5 rounded bg-white/10 hover:bg-[#e63917] text-[9px] font-mono font-bold text-white cursor-pointer">
+                                                            PNG
+                                                        </button>
+                                                        <button type="button" onclick="exportSingleHudButton('${b.id}', 'svg')"
+                                                            class="py-0.5 rounded bg-white/10 hover:bg-[#0072e5] text-[9px] font-mono font-bold text-white cursor-pointer">
+                                                            SVG
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            `).join('')}
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <!-- Интерактивный холст перетаскивания адаптивных кнопок HUD -->
+                    <div class="hud-dropzone relative z-10 flex-1 min-h-0 overflow-hidden">
+                        
+                        <!-- Нижний ориентир координат и текущего размера -->
+                        <div class="absolute bottom-2.5 left-1/2 -translate-x-1/2 pointer-events-none hp-telemetry-pill px-3.5 py-1 flex items-center gap-2.5">
+                            <span data-hud-coords class="font-mono text-[10.5px] font-bold text-slate-100">
+                                ${getHudNodeLabel(activeNode)} • X:${activeNode.x}% Y:${activeNode.y}% • ${nodeScalePct}%
+                            </span>
+                        </div>
+
+                        ${visibleButtons.map(btn => {
+                            const selected = btn.id === activeNode.id;
+                            const px = computeHudNodePx(btn);
+                            return `
+                                <div data-hud-node="${btn.id}"
+                                     onmousedown="startHudDrag(event, '${btn.id}')"
+                                     ontouchstart="startHudDrag(event, '${btn.id}')"
+                                     style="left: ${btn.x}%; top: ${btn.y}%; width: ${px}px; height: ${px}px; opacity: ${opacityVal}; transform: translate(-50%, -50%);"
+                                     class="hud-node absolute flex items-center justify-center cursor-grab active:cursor-grabbing ${selected ? 'z-20 drop-shadow-[0_0_12px_rgba(255,255,255,0.9)]' : 'z-10'}">
+                                    <div class="w-full h-full pointer-events-none [&>svg]:w-full [&>svg]:h-full">
+                                        ${renderHudButtonSvg(btn.icon, px)}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // =========================================================================
+        // 10. РЕНДЕР ПРИЛОЖЕНИЯ (РЕЖИМ «ЛАУНЧЕР» ИЛИ «КОЛЛАЖ ЭКРАНОВ» 2×2)
+        // =========================================================================
+        function renderApp() {
+            scheduleSyncToAndroid();
+            const container = document.getElementById('workspaceContainer');
+            const btnSingle = document.getElementById('btnViewSingle');
+            const btnCollage = document.getElementById('btnViewCollage');
+
+            const activeTabClass = 'bg-gradient-to-r from-[#e63917] to-[#0072e5] text-white';
+            const inactiveTabClass = 'text-slate-300 hover:text-white hover:bg-white/10';
+
+            if (state.viewMode === 'collage') {
+                container.className = 'w-full max-w-[1640px] my-auto flex-1 grid grid-cols-1 xl:grid-cols-2 gap-4';
+                btnCollage.className = `px-3.5 py-1 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer rounded ${activeTabClass}`;
+                btnSingle.className = `px-3.5 py-1 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer rounded ${inactiveTabClass}`;
+
+                const cards = [
+                    { key: 'main',     label: '01 / ГЛАВНЫЙ ЭКРАН',    html: renderMainScreen() },
+                    { key: 'controls', label: '02 / УПРАВЛЕНИЕ',       html: renderControlsScreen() },
+                    { key: 'graphics', label: '03 / ГРАФИКА',          html: renderGraphicsScreen() },
+                    { key: 'hud',      label: '04 / РЕДАКТОР HUD',     html: renderHudEditorScreen() }
+                ];
+
+                container.innerHTML = cards.map(c => `
+                    <div class="flex flex-col gap-1.5">
+                        <div class="flex items-center justify-between px-1">
+                            <span class="font-mono text-[11px] font-bold tracking-wider text-slate-300">${c.label}</span>
+                            <button type="button" onclick="openSingleFromCollage('${c.key}')"
+                                class="text-[11px] font-bold text-[#66b5ff] hover:text-white cursor-pointer">
+                                Открыть ↗
+                            </button>
+                        </div>
+                        <div class="device-frame">
+                            ${c.html}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                container.className = 'w-full max-w-[1160px] my-auto flex-1 flex flex-col justify-center';
+                btnSingle.className = `px-3.5 py-1 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer rounded ${activeTabClass}`;
+                btnCollage.className = `px-3.5 py-1 text-xs font-bold uppercase tracking-wider transition-all cursor-pointer rounded ${inactiveTabClass}`;
+
+                let screenMarkup = '';
+                if (state.currentScreen === 'main') screenMarkup = renderMainScreen();
+                else if (state.currentScreen === 'controls') screenMarkup = renderControlsScreen();
+                else if (state.currentScreen === 'graphics') screenMarkup = renderGraphicsScreen();
+                else screenMarkup = renderHudEditorScreen();
+
+                container.innerHTML = `
+                    <div class="device-frame">
+                        ${screenMarkup}
+                    </div>
+                `;
+            }
+        }
+
+        // =========================================================================
+        // 11. ДИАГНОСТИЧЕСКИЙ ЛОГ NX2ANDROID И ЭКСПОРТ КНОПОК PNG / SVG
+        // =========================================================================
+        function generateDiagnosticLog() {
+            const g = state.graphics;
+            const c = state.controls;
+            const rl = c.raceLayout;
+            const ts = new Date().toISOString().replace('T', ' ').slice(0, 19);
+
+            return `[${ts}] [INFO]  nx2android Launcher — Need for Speed: Hot Pursuit Remastered
+[${ts}] [SYS]   Platform=Android_ARM64 | Aspect=20:9_Landscape | Wallpaper=${state.customBgUrl ? 'Custom_User_Image' : 'Default_Steel_Dusk'}
+[${ts}] [ENV]   DM_VK_NOCULL=${g.dmVkNocull ? '1' : '0'} | VK_ICD_FILENAMES=${g.vulkanDriver === 'turnip' ? 'turnip_icd.aarch64.json' : 'system_vulkan'}
+[${ts}] [VK]    Vulkan=1.3 | Driver=${g.vulkanDriver === 'turnip' ? 'Turnip_Adreno' : 'System_Vulkan'} | ShaderCache=${g.shaderCache ? 'On' : 'Off'}
+[${ts}] [GFX]   Resolution=${g.resolution} | AMD_FSR_1.0=${g.fsr} | FSR_Sharpness=${(g.fsrSharpness / 100).toFixed(1)} | FPS_Limit=${g.fpsLimit}
+[${ts}] [GFX]   DynamicShadows=${g.shadows} | Anisotropic=${g.anisotropic} | AntiAliasing=${g.aa} | Reflections=${g.reflections} | WorldDetail=${g.drawDistance}
+[${ts}] [INPUT] Device=${c.device} | Steering=${c.steering} | Deadzone=${c.deadzone}% | Sensitivity=${c.sensitivity}% | AutoGas=${c.autoGas ? 'On' : 'Off'} | Vibration=${c.vibration ? 'On' : 'Off'}
+[${ts}] [HUD]   Opacity=${c.hudOpacity}% | Size=${c.hudSize}% | Gas=(${rl.gas.x}%,${rl.gas.y}%) Brake=(${rl.brake.x}%,${rl.brake.y}%) EMP=(${rl.empWeapon.x}%,${rl.empWeapon.y}%) Spikes=(${rl.spikeStrip.x}%,${rl.spikeStrip.y}%)`;
+        }
+
+        function showFacetedToast(title, detail, accent = 'scpd') {
+            const stack = document.getElementById('toastContainer');
+            const barColor = accent === 'racer' ? 'bg-[#e63917]' : accent === 'confirm' ? 'bg-emerald-500' : 'bg-[#0072e5]';
+            const el = document.createElement('div');
+            el.className = 'hp-glass-panel pointer-events-auto transition-all duration-200 px-3.5 py-2.5 flex items-center gap-2.5';
+            el.innerHTML = `
+                <span class="w-1.5 h-7 rounded-sm ${barColor} flex-shrink-0"></span>
+                <div>
+                    <div class="text-xs font-extrabold uppercase tracking-wide text-white">${title}</div>
+                    <div class="font-mono text-[10.5px] text-slate-300 mt-0.5">${detail}</div>
+                </div>
+            `;
+            stack.appendChild(el);
+            setTimeout(() => {
+                el.style.opacity = '0';
+                el.style.transform = 'translateX(10px)';
+                setTimeout(() => el.remove(), 220);
+            }, 2500);
+        }
+
+
+        // =========================================================================
+        // ANDROID BRIDGE INTEGRATION (org.nx2a.nfshpr)
+        // =========================================================================
+        function buildEnvText() {
+            const g = state.graphics;
+            const fpsPin = g.fpsLimit === '30' ? '30' : (g.fpsLimit === '60' ? '60' : '120');
+            const anisoMap = { 'off': '1.0', '2x': '2.0', '4x': '4.0', '8x': '8.0', '16x': '16.0' };
+            const anisoVal = anisoMap[g.anisotropic] || '4.0';
+            const dmLang = state.lang === 'ru' ? 'ru' : 'en-US';
+            const lines = [
+                '# Need for Speed: Hot Pursuit Remastered — Native Android Runtime Config',
+                'DM_LANG=' + dmLang,
+                'DM_SHARED_FONT_EXT=/sdcard/Android/data/org.nx2a.nfshpr/files/nintendo_ext.ttf',
+                'DM_ROMFS=/sdcard/Games/NFSHPR/RomFS',
+            ];
+            const hw = window.__hwInfo || {};
+            const isMali = (hw.gpuProfile === 'mali_mtk') || (g.vulkanDriver === 'system' && !g.gmem);
+            if (g.vulkanDriver === 'turnip') {
+                lines.push('DM_VK_DRIVER=libvulkan.purple.so');
+            }
+            lines.push(g.gmem ? 'TU_DEBUG=startup,nocb' : 'TU_DEBUG=startup,nocb,sysmem');
+            if (g.vulkanDriver === 'turnip') {
+                lines.push(
+                    'DM_VK_RP=1',
+                    'DM_VK_LRZ_TOUCH=0',
+                    'DM_VK_FDZ=0',
+                    'DM_VK_FLIP_FRONT=1',
+                    'DM_VK_UBWC=3',
+                    'DM_VK_SETSPLIT=1',
+                    'DM_VK_PRESENT=mailbox'
+                );
+            } else if (!isMali) {
+                lines.push(
+                    'DM_VK_RP=1',
+                    'DM_VK_LRZ_TOUCH=0',
+                    'DM_VK_FDZ=0',
+                    'DM_VK_FLIP_FRONT=1',
+                    'DM_VK_SETSPLIT=1',
+                    'DM_VK_PRESENT=mailbox'
+                );
+            } else {
+                lines.push('DM_VK_PRESENT=fifo');
+            }
+            lines.push(
+                'DM_NVN_ASYNC=1',
+                'DM_NVN_ACQ_REPLAYED=0',
+                'DM_PIN_REPLAY=big',
+                'DM_GPU_TURBO=1',
+                'DM_ADAPTIVE_FPS=0',
+                'DM_FPS_PIN=' + fpsPin,
+                'DM_VK_FIT=fill',
+                'DM_ULTRAWIDE=1',
+                'DM_OPMODE=' + (g.resolution === '1080p' ? '1' : '0')
+            );
+            if (g.resolution === '540p') {
+                lines.push('DM_RES=540p');
+            } else {
+                lines.push('DM_RES=720p');
+            }
+            if (!g.shaderCache) {
+                lines.push('DM_VK_NOPCACHE=1');
+            }
+            lines.push(
+                'DM_VK_NOCULL=' + (g.dmVkNocull ? '1' : '0'),
+                'DM_VK_MT_REPLAY=0',
+                'DM_VK_CB_DRAWS=0',
+                'DM_VK_SUBMIT_SPLIT=0',
+                'DM_VK_ASYNC_PIPE=0',
+                'DM_VK_PACE=0',
+                'DM_WINDOW_FPS=120',
+                'DM_VK_PASS_TIMES=0',
+                'DM_VK_PROF_SLOW=0',
+                'DM_VK_FP16=0',
+                'DM_AUDIO_BURSTS=48',
+                'DM_VK_MAX_ANISO=' + anisoVal
+            );
+            return lines.join('\n') + '\n';
+        }
+
+        function buildSettingsText() {
+            const c = state.controls;
+            const g = state.graphics;
+            const overlay = c.device === 'touch' ? 1 : 0;
+            const rumble = c.vibration ? 1 : 0;
+            const docked = g.resolution === '1080p' ? 1 : 0;
+            const steer = c.steering === 'buttons' ? 0 : (c.steering === 'stick' ? 1 : 2);
+            const lines = [
+                'overlay=' + overlay,
+                'rumble=' + rumble,
+                'docked=' + docked,
+                'fps=1',
+                'opacity=' + c.hudOpacity,
+                'grid=0',
+                'steer=' + steer
+            ];
+            return lines.join('\n') + '\n';
+        }
+
+        function buildUiJson() {
+            const c = state.controls;
+            const toNativeBtn = (b, isMenu) => {
+                const sc = (c.hudSize / 100.0) * (b.scale || 1.0);
+                const base = b.baseSize || 64;
+                const w = Math.max(36, Math.min(160, Math.round(base * sc)));
+                const h = Math.max(36, Math.min(160, Math.round(base * sc)));
+                const x = Math.max(4, Math.min(96, Math.round(b.x)));
+                const y = Math.max(6, Math.min(94, Math.round(b.y)));
+                return {
+                    id: b.id,
+                    label: b.tag || b.label || b.id,
+                    x: x,
+                    y: y,
+                    w: w,
+                    h: h,
+                    racer: !isMenu
+                };
+            };
+            const allRace = Object.values(c.raceLayout)
+                .filter(b => b.group === 'common' || b.group === c.steering);
+            const copBtns = allRace
+                .filter(b => b.id !== 'turbo' && b.id !== 'jammer')
+                .map(b => toNativeBtn(b, false));
+            const racerBtns = allRace
+                .filter(b => b.id !== 'roadblock' && b.id !== 'heli' && b.id !== 'siren')
+                .map(b => toNativeBtn(b, false));
+            const menuBtns = Object.values(c.menuLayout)
+                .map(b => toNativeBtn(b, true));
+            return JSON.stringify({
+                cop: copBtns,
+                racer: racerBtns,
+                menu: menuBtns,
+                nfshprState: {
+                    schemaVersion: 2,
+                    lang: state.lang,
+                    controls: state.controls,
+                    graphics: state.graphics
+                }
+            });
+        }
+
+        function syncToAndroid() {
+            if (typeof AndroidBridge === 'undefined') return 'ok';
+            try {
+                return AndroidBridge.saveConfig(buildEnvText(), buildSettingsText(), buildUiJson());
+            } catch (e) {
+                return 'err:' + e;
+            }
+        }
+
+        function loadFromAndroid() {
+            if (typeof AndroidBridge === 'undefined') return;
+            try {
+                const stRaw = AndroidBridge.getStatus && AndroidBridge.getStatus();
+                let hwProfile = 'adreno_turnip';
+                if (stRaw) {
+                    const st = JSON.parse(stRaw);
+                    window.__hwInfo = st;
+                    if (st.gpuProfile) hwProfile = st.gpuProfile;
+                    if (st.storage === false && AndroidBridge.requestStoragePermission) {
+                        setTimeout(() => AndroidBridge.requestStoragePermission(), 400);
+                    }
+                }
+                const applyAutoHw = () => {
+                    if (state.graphics.autoProfile === false) return;
+                    if (hwProfile === 'mali_mtk') {
+                        state.graphics.vulkanDriver = 'system';
+                        state.graphics.gmem = false;
+                    } else if (hwProfile === 'adreno_sys' || hwProfile === 'system') {
+                        state.graphics.vulkanDriver = 'system';
+                        state.graphics.gmem = true;
+                    } else {
+                        state.graphics.vulkanDriver = 'turnip';
+                        state.graphics.gmem = true;
+                    }
+                };
+                applyAutoHw();
+                const cfgRaw = AndroidBridge.loadConfig && AndroidBridge.loadConfig();
+                if (!cfgRaw) return;
+                const cfg = JSON.parse(cfgRaw);
+                if (cfg.ui) {
+                    try {
+                        const parsedUi = JSON.parse(cfg.ui);
+                        if (parsedUi && parsedUi.nfshprState && parsedUi.nfshprState.schemaVersion === 2) {
+                            if (parsedUi.nfshprState.lang) {
+                                state.lang = parsedUi.nfshprState.lang;
+                            }
+                            if (parsedUi.nfshprState.controls) {
+                                const sc = parsedUi.nfshprState.controls;
+                                const savedRace = sc.raceLayout || {};
+                                const savedMenu = sc.menuLayout || {};
+                                Object.assign(state.controls, sc);
+                                const cleanRace = JSON.parse(JSON.stringify(defaultRaceLayout));
+                                for (const k of Object.keys(cleanRace)) {
+                                    if (savedRace[k]) Object.assign(cleanRace[k], savedRace[k]);
+                                }
+                                const cleanMenu = JSON.parse(JSON.stringify(defaultGarageMenuLayout));
+                                for (const k of Object.keys(cleanMenu)) {
+                                    if (savedMenu[k]) Object.assign(cleanMenu[k], savedMenu[k]);
+                                }
+                                state.controls.raceLayout = cleanRace;
+                                state.controls.menuLayout = cleanMenu;
+                            }
+                            if (parsedUi.nfshprState.graphics) {
+                                Object.assign(state.graphics, parsedUi.nfshprState.graphics);
+                                if (!['540p', '720p', '1080p'].includes(state.graphics.resolution)) {
+                                    state.graphics.resolution = '720p';
+                                }
+                                applyAutoHw();
+                            }
+                        }
+                    } catch (e) {}
+                }
+            } catch (e) {}
+        }
+
+        window.onAndroidBack = function() {
+            const logModal = document.getElementById('logModal');
+            if (logModal && !logModal.classList.contains('hidden')) {
+                toggleLogModal(false);
+                return;
+            }
+            if (state.showAtlasDrawer) {
+                toggleAtlasDrawer(false);
+                return;
+            }
+            if (state.isLaunching) {
+                cancelLaunch();
+                return;
+            }
+            if (state.currentScreen === 'hud') {
+                navigateTo('controls');
+                return;
+            }
+            if (state.currentScreen !== 'main') {
+                navigateTo('main');
+            }
+        };
+
+        let _syncTimer = null;
+        function scheduleSyncToAndroid() {
+            if (_syncTimer) clearTimeout(_syncTimer);
+            _syncTimer = setTimeout(syncToAndroid, 250);
+        }
+
+        function copyDiagnosticLog() {
+            const logPath = '/sdcard/Android/data/org.nx2a.nfshpr/files/log.txt';
+            if (typeof AndroidBridge !== 'undefined' && AndroidBridge.copyLog) {
+                const res = AndroidBridge.copyLog();
+                if (res && res.startsWith('ok:')) {
+                    state.logCopied = true;
+                    renderApp();
+                    const parts = res.split(':');
+                    showFacetedToast(t('logCopied'), parts[1] + ' lines • ' + logPath, 'confirm');
+                    setTimeout(() => {
+                        state.logCopied = false;
+                        renderApp();
+                    }, 2200);
+                } else {
+                    showFacetedToast('Log', (res ? res.replace('err:', '') : 'Launch game first') + ' • ' + logPath, 'scpd');
+                }
+                return;
+            }
+            const logText = generateDiagnosticLog();
+            const ta = document.createElement('textarea');
+            ta.value = logText;
+            ta.style.position = 'fixed';
+            ta.style.left = '-9999px';
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                state.logCopied = true;
+                renderApp();
+                showFacetedToast(t('logCopied'), getTelemetrySummary(), 'confirm');
+                setTimeout(() => {
+                    state.logCopied = false;
+                    renderApp();
+                }, 2200);
+            } catch (err) {
+                toggleLogModal(true);
+            }
+            document.body.removeChild(ta);
+        }
+
+        function downloadDiagnosticLog() {
+            const logPath = '/sdcard/Android/data/org.nx2a.nfshpr/files/log.txt';
+            if (typeof AndroidBridge !== 'undefined' && AndroidBridge.copyLog) {
+                AndroidBridge.copyLog();
+            }
+            showFacetedToast(t('toastLogSaved'), logPath, 'scpd');
+        }
+
+        function toggleLogModal(show) {
+            const modal = document.getElementById('logModal');
+            if (show) {
+                document.getElementById('logModalContent').textContent = 'Runtime log path: /sdcard/Android/data/org.nx2a.nfshpr/files/log.txt\n\n' + generateDiagnosticLog();
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+            } else {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }
+        }
+
+        function exportSingleHudButton(btnId, format) {
+            let found = null;
+            for (const cat of hudAtlasCategories) {
+                const match = cat.buttons.find(b => b.id === btnId);
+                if (match) { found = match; break; }
+            }
+            if (!found) return;
+
+            const svgCode = renderHudButtonSvg(found.icon, 128);
+            if (format === 'svg') {
+                const blob = new Blob([svgCode], { type: 'image/svg+xml;charset=utf-8' });
+                triggerDownload(blob, `nfshp_hud_${found.id}.svg`);
+                showFacetedToast('SVG сохранён', `nfshp_hud_${found.id}.svg`, 'scpd');
+                return;
+            }
+
+            const svgBlob = new Blob([svgCode], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            const img = new Image();
+            img.onload = () => {
+                const c = document.createElement('canvas');
+                c.width = 128;
+                c.height = 128;
+                c.getContext('2d').drawImage(img, 0, 0, 128, 128);
+                URL.revokeObjectURL(url);
+                c.toBlob(pngBlob => {
+                    if (pngBlob) {
+                        triggerDownload(pngBlob, `nfshp_hud_${found.id}.png`);
+                        showFacetedToast('PNG сохранён', `${found.name} • 128×128`, 'racer');
+                    }
+                }, 'image/png');
+            };
+            img.src = url;
+        }
+
+        function exportFullAtlasPng() {
+            const allButtons = hudAtlasCategories.flatMap(c => c.buttons);
+            const cols = 8;
+            const cell = 128;
+            const rows = Math.ceil(allButtons.length / cols);
+            const width = cols * cell;
+            const height = rows * cell;
+
+            const nodes = allButtons.map((b, i) => {
+                const col = i % cols;
+                const row = Math.floor(i / cols);
+                const x = col * cell + 16;
+                const y = row * cell + 16;
+                const inner = renderHudButtonSvg(b.icon, 96)
+                    .replace(/<svg[^>]*>/, '')
+                    .replace('</svg>', '');
+                return `<g transform="translate(${x}, ${y})">${inner}</g>`;
+            }).join('\n');
+
+            const sheetSvg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${nodes}</svg>`;
+            const blob = new Blob([sheetSvg], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                const c = document.createElement('canvas');
+                c.width = width;
+                c.height = height;
+                c.getContext('2d').drawImage(img, 0, 0, width, height);
+                URL.revokeObjectURL(url);
+                c.toBlob(pngBlob => {
+                    if (pngBlob) {
+                        triggerDownload(pngBlob, `nfshp_hud_atlas_${allButtons.length}.png`);
+                        showFacetedToast('Атлас PNG сохранён', `${allButtons.length} кнопок • ${width}×${height}`, 'confirm');
+                    }
+                }, 'image/png');
+            };
+            img.src = url;
+        }
+
+        function triggerDownload(blob, filename) {
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+        }
+
+        // =========================================================================
+        // 12. ИНТЕРАКТИВНЫЕ ОБРАБОТЧИКИ НАВИГАЦИИ, НАСТРОЕК И DRAG & DROP
+        // =========================================================================
+        let launchTimers = [];
+        let activeDrag = null;
+        let navTransitionTimer = null;
+
+        function setViewMode(mode) {
+            if (state.viewMode === mode) return;
+            state.viewMode = mode;
+            state.animateScreen = true;
+            renderApp();
+            state.animateScreen = false;
+        }
+
+        function transitionToScreen(targetScreen) {
+            if (state.currentScreen === targetScreen) return;
+            if (navTransitionTimer) {
+                clearTimeout(navTransitionTimer);
+                navTransitionTimer = null;
+            }
+            const activeLayer = document.querySelector('#workspaceContainer .device-screen > .relative.z-10, #workspaceContainer .device-screen');
+            if (activeLayer) {
+                activeLayer.classList.add('hp-screen-exit');
+            }
+            navTransitionTimer = setTimeout(() => {
+                navTransitionTimer = null;
+                state.currentScreen = targetScreen;
+                state.animateScreen = true;
+                renderApp();
+                state.animateScreen = false;
+            }, 135);
+        }
+
+        function navigateTo(screen) {
+            if (state.viewMode === 'collage') {
+                state.currentScreen = screen;
+                const idxMap = { main: 0, controls: 1, graphics: 2, hud: 3 };
+                const frames = document.querySelectorAll('#workspaceContainer .device-frame');
+                const target = frames[idxMap[screen]];
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    target.style.boxShadow = '0 0 0 2px #0072e5, 0 28px 70px -14px rgba(0,0,0,0.88)';
+                    setTimeout(() => { target.style.boxShadow = ''; }, 900);
+                }
+                return;
+            }
+            transitionToScreen(screen);
+        }
+
+        function openSingleFromCollage(screen) {
+            state.currentScreen = screen;
+            state.viewMode = 'single';
+            state.animateScreen = true;
+            renderApp();
+            state.animateScreen = false;
+        }
+
+        function startGameLaunch() {
+            syncToAndroid();
+            if (typeof AndroidBridge !== 'undefined' && AndroidBridge.launchGame) {
+                const res = AndroidBridge.launchGame(buildEnvText(), buildSettingsText(), buildUiJson());
+                if (res !== 'ok') {
+                    showFacetedToast('Error', res.replace('err:', ''), 'racer');
+                }
+                return;
+            }
+            launchTimers.forEach(t => clearTimeout(t));
+            launchTimers = [];
+            state.isLaunching = true;
+            state.launchPercent = 20;
+            state.launchStage = t('launchStep1');
+            renderApp();
+
+            const steps = [
+                { delay: 400,  pct: 55, text: t('launchStep2').replace('{res}', state.graphics.resolution) },
+                { delay: 850,  pct: 85, text: t('launchStep3') },
+                { delay: 1300, pct: 100, text: t('launchStep4') }
+            ];
+
+            steps.forEach(s => {
+                launchTimers.push(setTimeout(() => {
+                    if (!state.isLaunching) return;
+                    state.launchPercent = s.pct;
+                    state.launchStage = s.text;
+                    renderApp();
+                }, s.delay));
+            });
+
+            launchTimers.push(setTimeout(() => {
+                if (!state.isLaunching) return;
+                showFacetedToast(t('toastVulkanReady'), getTelemetrySummary(), 'racer');
+            }, 1600));
+        }
+
+        function cancelLaunch() {
+            launchTimers.forEach(t => clearTimeout(t));
+            launchTimers = [];
+            state.isLaunching = false;
+            renderApp();
+        }
+
+        function loadBackgroundFromFile(file, sourceLabel = '') {
+            if (!file || !file.type || !file.type.startsWith('image/')) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                state.customBgUrl = e.target.result;
+                document.getElementById('btnResetCustomBg').classList.remove('hidden');
+                renderApp();
+                showFacetedToast('Фон обновлён', sourceLabel || file.name || 'Изображение', 'scpd');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleCustomBgUpload(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            loadBackgroundFromFile(file, file.name);
+        }
+
+        function resetCustomBg() {
+            state.customBgUrl = null;
+            document.getElementById('bgUploadInput').value = '';
+            document.getElementById('btnResetCustomBg').classList.add('hidden');
+            renderApp();
+            showFacetedToast('Фон сброшен', 'Стандартный тёмный фон', 'scpd');
+        }
+
+        // Поддержка вставки скриншота из буфера обмена (Ctrl+V / Cmd+V)
+        window.addEventListener('paste', event => {
+            const items = event.clipboardData && event.clipboardData.items;
+            if (!items) return;
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.startsWith('image/')) {
+                    const file = items[i].getAsFile();
+                    if (file) {
+                        event.preventDefault();
+                        loadBackgroundFromFile(file, 'Вставлено из буфера (Ctrl+V)');
+                        break;
+                    }
+                }
+            }
+        });
+
+        // Поддержка перетаскивания изображения в окно (Drag & Drop)
+        let dragCounter = 0;
+        window.addEventListener('dragenter', event => {
+            if (event.dataTransfer && Array.from(event.dataTransfer.types).includes('Files')) {
+                dragCounter++;
+                const overlay = document.getElementById('globalDropOverlay');
+                overlay.classList.remove('hidden');
+                overlay.classList.add('flex');
+            }
+        });
+
+        window.addEventListener('dragover', event => {
+            if (event.dataTransfer && Array.from(event.dataTransfer.types).includes('Files')) {
+                event.preventDefault();
+            }
+        });
+
+        window.addEventListener('dragleave', () => {
+            dragCounter = Math.max(0, dragCounter - 1);
+            if (dragCounter === 0) {
+                const overlay = document.getElementById('globalDropOverlay');
+                overlay.classList.add('hidden');
+                overlay.classList.remove('flex');
+            }
+        });
+
+        window.addEventListener('drop', event => {
+            dragCounter = 0;
+            const overlay = document.getElementById('globalDropOverlay');
+            overlay.classList.add('hidden');
+            overlay.classList.remove('flex');
+
+            const files = event.dataTransfer && event.dataTransfer.files;
+            if (files && files.length > 0) {
+                const imgFile = Array.from(files).find(f => f.type.startsWith('image/'));
+                if (imgFile) {
+                    event.preventDefault();
+                    loadBackgroundFromFile(imgFile, imgFile.name);
+                }
+            }
+        });
+
+        // Плавное обновление ползунков без сброса фокуса
+        function updateSliderLive(key, rawVal) {
+            const val = Number(rawVal);
+            if (key === 'deadzone') {
+                state.controls.deadzone = val;
+                document.querySelectorAll('[data-val-deadzone]').forEach(el => el.textContent = `${val}%`);
+            } else if (key === 'sensitivity') {
+                state.controls.sensitivity = val;
+                document.querySelectorAll('[data-val-sensitivity]').forEach(el => el.textContent = `${val}%`);
+            } else if (key === 'hudOpacity') {
+                state.controls.hudOpacity = val;
+                document.querySelectorAll('[data-val-hudOpacity]').forEach(el => el.textContent = `${val}%`);
+                document.querySelectorAll('.hud-node').forEach(node => {
+                    node.style.opacity = Math.max(0.2, val / 100);
+                });
+            } else if (key === 'hudSize') {
+                state.controls.hudSize = val;
+                document.querySelectorAll('[data-val-hudSize]').forEach(el => el.textContent = `${val}%`);
+                refreshAllHudNodeSizes();
+            } else if (key === 'fsrSharpness') {
+                state.graphics.fsrSharpness = val;
+                document.querySelectorAll('[data-val-fsrSharpness]').forEach(el => el.textContent = (val / 100).toFixed(1));
+            }
+        }
+
+        function refreshAllHudNodeSizes() {
+            const maps = [state.controls.raceLayout, state.controls.menuLayout];
+            maps.forEach(mapObj => {
+                Object.values(mapObj).forEach(btn => {
+                    const px = computeHudNodePx(btn);
+                    document.querySelectorAll(`[data-hud-node="${btn.id}"]`).forEach(node => {
+                        node.style.width = `${px}px`;
+                        node.style.height = `${px}px`;
+                    });
+                });
+            });
+        }
+
+        function updateSingleHudScale(rawVal) {
+            const pct = Number(rawVal);
+            const mapObj = getActiveHudMap();
+            const btn = mapObj[state.selectedHudId];
+            if (!btn) return;
+            btn.scale = pct / 100;
+            document.querySelectorAll('[data-hud-active-pct]').forEach(el => el.textContent = `${pct}%`);
+            document.querySelectorAll('[data-hud-coords]').forEach(el => {
+                el.textContent = `${getHudNodeLabel(btn)} • X:${btn.x}% Y:${btn.y}% • ${pct}%`;
+            });
+            const px = computeHudNodePx(btn);
+            document.querySelectorAll(`[data-hud-node="${btn.id}"]`).forEach(node => {
+                node.style.width = `${px}px`;
+                node.style.height = `${px}px`;
+            });
+        }
+
+        // Сеттеры вкладки УПРАВЛЕНИЕ
+        function setControlDevice(v) { state.controls.device = v; renderApp(); }
+        function setControlSteering(v) { state.controls.steering = v; renderApp(); }
+        function setControlAutoGas(v) { state.controls.autoGas = (v === 'on'); renderApp(); }
+        function setControlVibration(v) { state.controls.vibration = (v === 'on'); renderApp(); }
+
+        // Сеттеры вкладки ГРАФИКА
+        function setGfxGmem(v) { state.graphics.gmem = (v === 'on'); state.graphics.autoProfile = false; renderApp(); }
+        function setGfxResolution(v) { state.graphics.resolution = v; renderApp(); }
+        function setGfxFsr(v) { state.graphics.fsr = v; renderApp(); }
+        function setGfxFps(v) { state.graphics.fpsLimit = v; renderApp(); }
+        function setGfxShadows(v) { state.graphics.shadows = v; renderApp(); }
+        function setGfxAniso(v) { state.graphics.anisotropic = v; renderApp(); }
+        function setGfxAA(v) { state.graphics.aa = v; renderApp(); }
+        function setGfxReflections(v) { state.graphics.reflections = v; renderApp(); }
+        function setGfxDistance(v) { state.graphics.drawDistance = v; renderApp(); }
+        function setGfxVulkan(v) { state.graphics.autoProfile = false; state.graphics.vulkanDriver = v; renderApp(); }
+        function setGfxShaderCache(v) { state.graphics.shaderCache = (v === 'on'); renderApp(); }
+        function setGfxDmVkNocull(v) { state.graphics.dmVkNocull = (v === 'on'); renderApp(); }
+
+        // Редактор HUD
+        function setHudPreset(preset) {
+            state.hudPreset = preset;
+            state.selectedHudId = preset === 'menu' ? 'actA' : 'gas';
+            renderApp();
+        }
+
+        function resetHudLayout() {
+            if (state.hudPreset === 'menu') {
+                state.controls.menuLayout = JSON.parse(JSON.stringify(defaultGarageMenuLayout));
+            } else {
+                state.controls.raceLayout = JSON.parse(JSON.stringify(defaultRaceLayout));
+            }
+            renderApp();
+            showFacetedToast(t('toastLayoutReset'), t('toastLayoutResetSub'), 'scpd');
+        }
+
+        function toggleAtlasDrawer(force) {
+            state.showAtlasDrawer = typeof force === 'boolean' ? force : !state.showAtlasDrawer;
+            renderApp();
+        }
+
+        // Drag & Drop для кнопок HUD
+        function startHudDrag(event, btnId) {
+            if (event.cancelable) event.preventDefault();
+            const zone = event.currentTarget.closest('.hud-dropzone');
+            if (!zone) return;
+            const rect = zone.getBoundingClientRect();
+            state.selectedHudId = btnId;
+            activeDrag = { btnId, rect };
+            const mapObj = getActiveHudMap();
+            const btn = mapObj[btnId];
+            if (btn) {
+                document.querySelectorAll('[data-hud-coords]').forEach(el => {
+                    el.textContent = `${getHudNodeLabel(btn)} • X:${btn.x}% Y:${btn.y}%`;
+                });
+            }
+        }
+
+        function handleHudDragMove(event) {
+            if (!activeDrag) return;
+            if (event.cancelable) event.preventDefault();
+            const cx = event.touches ? event.touches[0].clientX : event.clientX;
+            const cy = event.touches ? event.touches[0].clientY : event.clientY;
+            const { btnId, rect } = activeDrag;
+
+            let x = Math.round(((cx - rect.left) / rect.width) * 100);
+            let y = Math.round(((cy - rect.top) / rect.height) * 100);
+            x = Math.max(6, Math.min(94, x));
+            y = Math.max(12, Math.min(86, y));
+
+            const mapObj = getActiveHudMap();
+            const btn = mapObj[btnId];
+            if (btn) {
+                btn.x = x;
+                btn.y = y;
+                document.querySelectorAll(`[data-hud-node="${btnId}"]`).forEach(el => {
+                    el.style.left = `${x}%`;
+                    el.style.top = `${y}%`;
+                });
+                document.querySelectorAll('[data-hud-coords]').forEach(el => {
+                    el.textContent = `${getHudNodeLabel(btn)} • X:${x}% Y:${y}%`;
+                });
+            }
+        }
+
+        function stopHudDrag() {
+            if (activeDrag) {
+                activeDrag = null;
+                renderApp();
+            }
+        }
+
+        window.addEventListener('mousemove', handleHudDragMove);
+        window.addEventListener('touchmove', handleHudDragMove, { passive: false });
+        window.addEventListener('mouseup', stopHudDrag);
+        window.addEventListener('touchend', stopHudDrag);
+        window.addEventListener('touchcancel', stopHudDrag);
+        window.addEventListener('resize', refreshAllHudNodeSizes);
+
+        window.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                if (state.isLaunching) cancelLaunch();
+                if (state.showAtlasDrawer) toggleAtlasDrawer(false);
+                toggleLogModal(false);
+            }
+        });
+
+        // Тактильный spring-отклик при касании пальцем на мобильных устройствах (Android / iOS)
+        document.addEventListener('touchstart', e => {
+            const btn = e.target.closest('button, a, .hp-telemetry-pill');
+            if (btn) {
+                btn.classList.add('is-touching');
+                if (navigator.vibrate) {
+                    try { navigator.vibrate(8); } catch (_) {}
+                }
+            }
+        }, { passive: true });
+
+        ['touchend', 'touchcancel'].forEach(evt => {
+            document.addEventListener(evt, () => {
+                document.querySelectorAll('.is-touching').forEach(el => el.classList.remove('is-touching'));
+            }, { passive: true });
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromAndroid();
+            state.animateScreen = false;
+            renderApp();
+            state.animateScreen = false;
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,20 @@
+# Burnout Paradise Remastered on Android
+# Criterion's engine (ported by Stellar Entertainment) on SDK 9.3.0, v1.0.0 (v0).
+status	experimental
+package	org.nx2a.bpr
+orientation	landscape
+requires	bcn
+setting	docked=0
+env	DM_NVN_ASYNC=1
+env	DM_PIN_REPLAY=big
+env	DM_VK_FDZ=0
+env	DM_VK_ASYNC_PIPE=0
+env	DM_VK_UBWC=3
+env	DM_GPU_TURBO=1
+env	DM_ADAPTIVE_FPS=0
+env	DM_VK_PACE=0
+env	DM_VK_SETSPLIT=1
+env	DM_VK_RP=1
+env	DM_VK_LRZ_TOUCH=0
+env	TU_DEBUG=startup,nocb
+env	DM_VK_CB_DRAWS=0

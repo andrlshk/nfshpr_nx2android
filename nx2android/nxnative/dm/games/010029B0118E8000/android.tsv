@@ -1,0 +1,20 @@
+# Need for Speed: Hot Pursuit Remastered on Android (keys in docs/ARCHITECTURE.md "Game profiles on Android")
+# Criterion's engine (ported by Stellar Entertainment) on SDK 10.4.1, update 1.0.3; 2,154 shaders (2,112 in SHADERS.BNDL, 42 in main).
+status	experimental
+package	org.nx2a.nfshpr
+orientation	landscape
+requires	bcn
+setting	docked=0
+env	DM_NVN_ASYNC=1
+env	DM_PIN_REPLAY=big
+env	DM_VK_FDZ=0
+env	DM_VK_ASYNC_PIPE=0
+env	DM_VK_UBWC=3
+env	DM_GPU_TURBO=1
+env	DM_ADAPTIVE_FPS=0
+env	DM_VK_PACE=0
+env	DM_VK_SETSPLIT=1
+env	DM_VK_RP=1
+env	DM_VK_LRZ_TOUCH=0
+env	TU_DEBUG=startup,nocb
+env	DM_VK_CB_DRAWS=0

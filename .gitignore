@@ -1,0 +1,32 @@
+# Keys and signing credentials
+*-signing-key.json
+*.keystore
+*.p12
+*.jks
+prod.keys
+title.keys
+
+# Nintendo dumps and game assets
+*.nsp
+*.xci
+*.nsz
+*.xcz
+*.nca
+.gamedump/
+RomFS/
+
+# Build outputs and toolchains
+*.apk
+*.aab
+*.so
+build/
+out/
+work/
+dist/
+tools/
+.venv/
+__pycache__/
+*.py[cod]
+*.spv
+*.dmsv
+*.log

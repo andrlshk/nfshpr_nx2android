@@ -1,0 +1,41 @@
+# Burnout Paradise Remastered (Criterion / Stellar Entertainment, SDK 9.3.0, NVN).
+# Shaders: whole GLSLC outputs in the zlib resources of SHADERS.BNDL and .BUNDLE/.BNDL files (shader_split.py bnd2_shaders) + 138 GLSLC outputs in main.
+
+# ---- Identity ----
+title_id	0100DBF01000A000
+program_id	0100DBF01000A000
+
+# ---- App ----
+name	Burnout Paradise Remastered
+ipa	BurnoutParadiseRemastered.ipa
+app_category	public.app-category.games
+
+# ---- Versions ----
+build	v0	1.0.0	main=74570fa2709ed714006cd65c42a97dc6	subsdk0=7040311f0662e3519cf01fdaca364112	sdk=230994acc1eb0f13878dd155361beff3
+package	v0
+shader_versions	v0
+
+# ---- Files ----
+modules	main subsdk0 sdk
+romfs_marker	VIDEOS/INTRO.MP4
+zip_store	.bin:.bndl:.bundle:.mp4:.png:.sns:.metallib
+
+# ---- Memory ----
+# main sets a heap of at most the pool − 64 MB: a 3328 MB heap region
+mem_reserve	0x100000000
+mem_alias	0x10000000
+mem_stack	0x10000000
+app_pool	0xCD500000
+sys_resource	0x0
+
+# ---- Frame rate ----
+present_interval	display
+enc_thread	on
+
+# ---- Textures ----
+tex_flush_upload	on
+tex_dirty_upload	on
+
+# ---- Shader split ----
+shader_groups	/SOUND/=sound /VEHICLES/=vehicles /GUIAPT/=guiapt /WHEELS/=wheels /ENGINES/=engines /LUA/=lua /LANGUAGE/=language /ENVIRONMENTSETTINGS/=environmentsetti /VIDEOS/=videos /POSTFX/=postfx /DOWNLOADED/=downloaded /VDB/=vdb /VEHICLEDEFS/=vehicledefs /GPGPU/=gpgpu /PROPS/=props
+shader_note	Burnout Paradise Remastered shaders
