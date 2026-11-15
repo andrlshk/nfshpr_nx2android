@@ -30,10 +30,13 @@ import android.webkit.WebViewClient;
 
 import org.json.JSONObject;
 
+import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
@@ -304,10 +307,43 @@ public class MainActivity extends Activity {
             return okApp ? "ok" : "err:Не удалось записать конфиг в " + appDir.getAbsolutePath();
         }
 
+        private String ensureGameDataExtracted(File appDir) {
+            try (InputStream mis = getAssets().open("gamedata/manifest.txt");
+                 BufferedReader br = new BufferedReader(new InputStreamReader(mis, StandardCharsets.UTF_8))) {
+                byte[] buf = new byte[65536];
+                String line;
+                while ((line = br.readLine()) != null) {
+                    line = line.trim();
+                    if (line.isEmpty()) continue;
+                    int sep = line.lastIndexOf('|');
+                    if (sep <= 0) continue;
+                    String rel = line.substring(0, sep);
+                    long expectedSize = Long.parseLong(line.substring(sep + 1));
+                    File dst = new File(appDir, rel);
+                    if (dst.exists() && dst.length() == expectedSize) continue;
+                    File parent = dst.getParentFile();
+                    if (parent != null && !parent.exists()) parent.mkdirs();
+                    try (InputStream in = getAssets().open("gamedata/" + rel);
+                         FileOutputStream out = new FileOutputStream(dst, false)) {
+                        int n;
+                        while ((n = in.read(buf)) > 0) out.write(buf, 0, n);
+                        out.flush();
+                    }
+                }
+                return null;
+            } catch (java.io.FileNotFoundException e) {
+                return null; // APK built without embedded gamedata
+            } catch (Exception e) {
+                return "err:Не удалось распаковать файлы порта: " + e.getMessage();
+            }
+        }
+
         @JavascriptInterface
         public String launchGame(String envText, String settingsText, String uiJson) {
             String saved = saveConfig(envText, settingsText, uiJson);
             if (saved.startsWith("err:")) return saved;
+            String extErr = ensureGameDataExtracted(getAppFilesDir());
+            if (extErr != null) return extErr;
             try {
                 ActivityManager am = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
                 if (am != null && am.getRunningAppProcesses() != null) {

@@ -227,6 +227,28 @@ def main():
             rel = asset_file.relative_to(ROOT).as_posix()
             entries.append((rel, asset_file.read_bytes(), 4))
 
+    gamedata_dir = REPO / "nx2android" / ".gamedump" / "NFSHPR" / "NeedForSpeedHotPursuitRemastered-data"
+    if gamedata_dir.exists():
+        manifest_lines = []
+        for sub in ("mods",):
+            sub_dir = gamedata_dir / sub
+            if sub_dir.is_dir():
+                for f in sorted(sub_dir.rglob("*")):
+                    if f.is_file():
+                        rel = f.relative_to(gamedata_dir).as_posix()
+                        data = f.read_bytes()
+                        entries.append((f"assets/gamedata/{rel}", data, 4))
+                        manifest_lines.append(f"{rel}|{len(data)}")
+        for fname in ("shaders.dmsv", "nintendo_ext.ttf"):
+            f = gamedata_dir / fname
+            if f.is_file():
+                data = f.read_bytes()
+                entries.append((f"assets/gamedata/{fname}", data, 4))
+                manifest_lines.append(f"{fname}|{len(data)}")
+        if manifest_lines:
+            entries.append(("assets/gamedata/manifest.txt", ("\n".join(manifest_lines) + "\n").encode("utf-8"), 4))
+            print(f"Embedded {len(manifest_lines)} gamedata files into assets/gamedata/")
+
     custom_dmhost = REPO / "nx2android" / "nxnative" / "dm" / "android" / "out" / "010029B0118E8000" / "libdmhost.so"
     with zipfile.ZipFile(BASE_APK) as zf:
         for name in zf.namelist():
