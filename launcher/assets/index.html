@@ -1983,7 +1983,14 @@
         function downloadDiagnosticLog() {
             const logPath = '/sdcard/Android/data/org.nx2a.nfshpr/files/log.txt';
             if (typeof AndroidBridge !== 'undefined' && AndroidBridge.copyLog) {
-                AndroidBridge.copyLog();
+                const res = AndroidBridge.copyLog();
+                if (res && res.startsWith('ok:')) {
+                    const parts = res.split(':');
+                    showFacetedToast(t('logCopied'), parts[1] + ' lines • ' + logPath, 'confirm');
+                } else {
+                    showFacetedToast('Log', (res ? res.replace('err:', '') : 'Launch game first') + ' • ' + logPath, 'scpd');
+                }
+                return;
             }
             showFacetedToast(t('toastLogSaved'), logPath, 'scpd');
         }

@@ -333,20 +333,52 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public String copyLog() {
-            File logFile = new File(getAppFilesDir(), "log.txt");
+            File appDir = getAppFilesDir();
+            File logFile = new File(appDir, "log.txt");
             String txt = readTextFile(logFile);
             if (txt.isEmpty()) {
                 return "err:Лог пока пуст (" + logFile.getAbsolutePath() + ")";
             }
-            if (txt.length() > 262144) {
-                txt = txt.substring(txt.length() - 262144);
+            detectGpuStrings();
+            String soc = Build.HARDWARE != null ? Build.HARDWARE : "";
+            if (Build.VERSION.SDK_INT >= 31 && Build.SOC_MODEL != null && !Build.SOC_MODEL.isEmpty() && !"unknown".equalsIgnoreCase(Build.SOC_MODEL)) {
+                soc = Build.SOC_MODEL;
             }
-            final String clip = txt;
-            runOnUiThread(() -> {
-                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm != null) {
-                    cm.setPrimaryClip(ClipData.newPlainText("NFSHPR log", clip));
+            String rawEnv = readTextFile(new File(GAME_DIR + "/env.txt"));
+            if (rawEnv.isEmpty()) rawEnv = readTextFile(new File(appDir, "env.txt"));
+            StringBuilder activeEnv = new StringBuilder();
+            for (String line : rawEnv.split("\n")) {
+                String t = line.trim();
+                if (!t.isEmpty() && !t.startsWith("#")) {
+                    activeEnv.append(t).append("\n");
                 }
+            }
+            StringBuilder header = new StringBuilder();
+            header.append("=== NFSHPR Diagnostic Header ===\n");
+            header.append("Device: ").append(Build.MODEL).append(" | SoC: ").append(soc).append("\n");
+            header.append("GPU: ").append(cachedGpuRenderer).append("\n");
+            header.append("Android: ").append(Build.VERSION.RELEASE).append(" (SDK ").append(Build.VERSION.SDK_INT).append(")\n");
+            if (activeEnv.length() > 0) {
+                header.append("--- Active env.txt ---\n").append(activeEnv);
+            }
+            header.append("--- Runtime log.txt ---\n");
+
+            final int maxTail = 131072; // ~128 KB tail limit to avoid Binder TransactionTooLargeException
+            String tail = txt;
+            if (tail.length() > maxTail) {
+                tail = tail.substring(tail.length() - maxTail);
+                int nl = tail.indexOf('\n');
+                if (nl >= 0 && nl < 4096) tail = tail.substring(nl + 1);
+                header.append("[... truncated to last ~128 KB ...]\n");
+            }
+            final String clip = header.toString() + tail;
+            runOnUiThread(() -> {
+                try {
+                    ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                    if (cm != null) {
+                        cm.setPrimaryClip(ClipData.newPlainText("NFSHPR log", clip));
+                    }
+                } catch (Throwable ignored) {}
             });
             int lines = clip.split("\n").length;
             return "ok:" + lines + ":" + clip.length();
