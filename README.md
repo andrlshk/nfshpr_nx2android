@@ -34,7 +34,7 @@ A fork of [nx2android](https://github.com/seedds/nx2android) (MIT License) with 
 ### Beta Status & Known Issues
 This port is currently in **beta**, so crashes, stutters, and unexpected quirks are possible. Known issues right now: audio crackling and relatively low FPS. Updates will keep coming — the entire project was built end-to-end with AI, so development goes on as long as there are tokens left :)
 
-If you know your way around this or have a Claude subscription and want to tinker — feel free to reach out (4PDA QMS or GitHub Issues). We can debug together, and if your fix genuinely helps, I will definitely add you to the credits (in the forum thread header and on GitHub).
+If you know your way around this or have a Claude subscription and want to tinker — feel free to reach out via GitHub Issues. We can debug together, and if your fix genuinely helps, I will definitely add you to the credits on GitHub.
 
 When reporting bugs, please include your **phone model / SoC** and attach the **log** (it can be copied to the clipboard with one button right inside the launcher).
 
@@ -70,6 +70,6 @@ When reporting bugs, please include your **phone model / SoC** and attach the **
 ### Статус бета-версии и известные проблемы
 Данный порт является бета-версией, поэтому возможны вылеты, лаги и много чего ещё непонятного. На данный момент из известного: звук похрипывает, а FPS маловат. Обновления будут выходить — весь проект от и до сделан с помощью ИИ, так что работа идёт, пока не закончатся токены :)
 
-Все, кто в этом хорошо понимает или у кого есть подписка на Claude и желание поковыряться — смело пишите в QMS (на 4PDA) или в GitHub Issues! Изучим проблему вместе, и если ваша правка реально поможет, обязательно впишу вас в кредиты (в шапке темы и на GitHub).
+Все, кто в этом хорошо понимает или у кого есть подписка на Claude и желание поковыряться — смело пишите в GitHub Issues! Изучим проблему вместе, и если ваша правка реально поможет, обязательно впишу вас в кредиты на GitHub.
 
 При баг-репортах желательно сразу указывать **модель телефона / процессора** и прикладывать **лог** (он копируется в буфер обмена одной кнопкой прямо в лаунчере).
