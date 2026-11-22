@@ -1,12 +1,14 @@
 # Need for Speed: Hot Pursuit Remastered — Android Native Port (`v1.0-beta`)
 
+[![Telegram](https://img.shields.io/badge/Telegram-@lshkports-26A5E4?style=for-the-badge&logo=telegram&logoColor=white)](https://t.me/lshkports)
+
 [English](#english) | [Русский](#русский)
 
 ---
 
 ## English
 
-A fork of [nx2android](https://github.com/seedds/nx2android) (MIT License) with a custom Android launcher, touch HUD, and automatic GPU/CPU detection (Snapdragon Adreno / MediaTek Mali) for **Need for Speed: Hot Pursuit Remastered** (`010029B0118E8000`).
+A fork of [nx2android](https://github.com/shirai91/nx2android) (MIT License) with a custom Android launcher, touch HUD, and automatic GPU/CPU detection (Snapdragon Adreno / MediaTek Mali) for **Need for Speed: Hot Pursuit Remastered** (`010029B0118E8000`).
 
 > [!IMPORTANT]
 > **No game files or decryption keys are included.** You must dump `RomFS` from your own legally owned copy of the game. `prod.keys` does **not** need to be placed on your phone — it is only required once on PC when extracting `RomFS`.
@@ -28,7 +30,7 @@ A fork of [nx2android](https://github.com/seedds/nx2android) (MIT License) with 
 - `LICENSE` — MIT License (`Copyright (c) 2026 seedds`)
 
 ### Credits & Acknowledgements
-- **Original port author & engine:** [nx2android](https://github.com/seedds/nx2android) (`seedds`)
+- **Original port author & engine:** [nx2android](https://github.com/shirai91/nx2android) (`seedds`)
 - **MediaTek (Mali) renderer:** huge thanks to **lesad** ([https://github.com/lesad710](https://github.com/lesad710)) for implementing the MTK Vulkan renderer fixes.
 
 ### Beta Status & Known Issues
@@ -38,11 +40,14 @@ If you know your way around this or have a Claude subscription and want to tinke
 
 When reporting bugs, please include your **phone model / SoC** and attach the **log** (it can be copied to the clipboard with one button right inside the launcher).
 
+### Community & Updates
+- **Telegram:** [@lshkports](https://t.me/lshkports) — releases, devlogs, and test builds.
+
 ---
 
 ## Русский
 
-Форк [nx2android](https://github.com/seedds/nx2android) (MIT License) с кастомным Android-лаунчером, сенсорным HUD и автоопределением GPU/CPU (Snapdragon Adreno / MediaTek Mali) для **Need for Speed: Hot Pursuit Remastered** (`010029B0118E8000`).
+Форк [nx2android](https://github.com/shirai91/nx2android) (MIT License) с кастомным Android-лаунчером, сенсорным HUD и автоопределением GPU/CPU (Snapdragon Adreno / MediaTek Mali) для **Need for Speed: Hot Pursuit Remastered** (`010029B0118E8000`).
 
 > [!IMPORTANT]
 > **Игровые файлы и ключи в репозиторий не включены.** Для запуска требуется `RomFS` из вашей собственной легальной копии игры. `prod.keys` на телефон копировать не нужно — он нужен только один раз при извлечении `RomFS` на ПК.
@@ -64,7 +69,7 @@ When reporting bugs, please include your **phone model / SoC** and attach the **
 - `LICENSE` — MIT License (`Copyright (c) 2026 seedds`)
 
 ### Авторы и благодарности
-- **Базовый проект и движок порта:** [nx2android](https://github.com/seedds/nx2android) (`seedds`)
+- **Базовый проект и движок порта:** [nx2android](https://github.com/shirai91/nx2android) (`seedds`)
 - **Рендер под MediaTek (Mali):** огромная благодарность **lesad** ([https://github.com/lesad710](https://github.com/lesad710)) за доработку Vulkan-рендера под MTK.
 
 ### Статус бета-версии и известные проблемы
@@ -73,3 +78,6 @@ When reporting bugs, please include your **phone model / SoC** and attach the **
 Все, кто в этом хорошо понимает или у кого есть подписка на Claude и желание поковыряться — смело пишите в GitHub Issues! Изучим проблему вместе, и если ваша правка реально поможет, обязательно впишу вас в кредиты на GitHub.
 
 При баг-репортах желательно сразу указывать **модель телефона / процессора** и прикладывать **лог** (он копируется в буфер обмена одной кнопкой прямо в лаунчере).
+
+### Telegram-канал
+- **Новости, обновления и тестовые сборки:** [@lshkports](https://t.me/lshkports)
